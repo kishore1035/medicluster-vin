@@ -29,7 +29,7 @@ function FindingsPanel({ findings, model }) {
   const TOP = 8;
   const top = findings.slice(0, TOP);
   return (
-    <div className="mt-2 bg-slate-50 border border-slate-100 rounded-[3px] p-3 space-y-2">
+    <div className="mt-2 bg-slate-50 border border-line rounded-[3px] p-3 space-y-2">
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
         AI Findings · <span className="font-mono normal-case">{model}</span>
       </p>
@@ -133,9 +133,9 @@ export default function PatientMediaModal({ patientId, onClose }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white rounded-[3px] w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-surface rounded-[3px] w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line">
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest font-semibold">Patient Files</p>
             <h2 className="text-base font-semibold text-blue-950 font-mono">{patientId}</h2>
@@ -158,7 +158,7 @@ export default function PatientMediaModal({ patientId, onClose }) {
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
             onClick={() => inputRef.current?.click()}
-            className={`border-2 border-dashed rounded-[3px] p-6 text-center cursor-pointer transition-colors ${dragOver ? "border-ink bg-sunken" : "border-slate-200 hover:border-line-strong hover:bg-slate-50"}`}
+            className={`border-2 border-dashed rounded-[3px] p-6 text-center cursor-pointer transition-colors ${dragOver ? "border-ink bg-sunken" : "border-line hover:border-line-strong hover:bg-slate-50"}`}
           >
             <input
               ref={inputRef}
@@ -206,7 +206,7 @@ export default function PatientMediaModal({ patientId, onClose }) {
                 return (
                   <div
                     key={f._id}
-                    className={`group relative border rounded-[3px] overflow-hidden bg-slate-50 transition-colors ${isSelected ? "border-ink ring-1 ring-ink/10" : "border-slate-100 hover:border-line-strong"}`}
+                    className={`group relative border rounded-[3px] overflow-hidden bg-slate-50 transition-colors ${isSelected ? "border-ink ring-1 ring-ink/10" : "border-line hover:border-line-strong"}`}
                   >
                     {f.file_type === "image" ? (
                       <button

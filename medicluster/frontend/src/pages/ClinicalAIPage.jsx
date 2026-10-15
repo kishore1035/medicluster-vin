@@ -79,7 +79,7 @@ function EmptyState({ children }) {
 
 function Pill({ children, tone = "slate" }) {
   const tones = {
-    slate: "bg-slate-50 text-slate-700 border-slate-200",
+    slate: "bg-slate-50 text-slate-700 border-line",
     blue: "bg-sunken text-blue-700 border-line-strong",
     green: "bg-surface text-emerald-700 border-emerald-200",
     amber: "bg-surface text-amber-700 border-amber-200",
@@ -514,7 +514,7 @@ export default function ClinicalAIPage() {
             value={notes}
             onChange={(e) => handleNotesChange(e.target.value)}
             placeholder="Paste doctor notes, discharge summaries, or prescriptions here…"
-            className="w-full text-sm border border-slate-200 rounded-[3px] p-3 resize-y font-mono focus:outline-none focus:ring-2 focus:ring-ink/10"
+            className="w-full text-sm border border-line rounded-[3px] p-3 resize-y font-mono focus:outline-none focus:ring-2 focus:ring-ink/10"
           />
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs text-slate-400">{notes.length} chars</span>
@@ -528,7 +528,7 @@ export default function ClinicalAIPage() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
             onClick={() => fileInputRef.current?.click()}
-            className="mt-3 border-2 border-dashed border-slate-200 rounded-[3px] p-4 text-center cursor-pointer hover:border-line-strong hover:bg-sunken transition-colors"
+            className="mt-3 border-2 border-dashed border-line rounded-[3px] p-4 text-center cursor-pointer hover:border-line-strong hover:bg-sunken transition-colors"
           >
             <input
               ref={fileInputRef}
@@ -637,7 +637,7 @@ export default function ClinicalAIPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200">
+                      <tr className="bg-slate-50 border-b border-line">
                         <th className="text-left px-3 py-2 text-slate-500 font-medium">Entity</th>
                         <th className="text-left px-3 py-2 text-slate-500 font-medium">Type</th>
                         <th className="text-left px-3 py-2 text-slate-500 font-medium">Confidence</th>
@@ -647,7 +647,7 @@ export default function ClinicalAIPage() {
                       {normalizedEntities.map((e, i) => (
                         <tr
                           key={i}
-                          className={`border-b border-slate-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}
+                          className={`border-b border-line ${i % 2 === 0 ? "bg-surface" : "bg-slate-50"}`}
                         >
                           <td className="px-3 py-2 font-medium text-slate-800">{e.label ?? e.text}</td>
                           <td className="px-3 py-2">
@@ -752,7 +752,7 @@ export default function ClinicalAIPage() {
                   ) : (
                     <div className="space-y-2">
                       {prescription.slice(0, 5).map((med, i) => (
-                        <div key={`${med.name}-${i}`} className="text-xs border-b border-slate-100 pb-2 last:border-0">
+                        <div key={`${med.name}-${i}`} className="text-xs border-b border-line pb-2 last:border-0">
                           <p className="font-semibold text-slate-800">{med.name}</p>
                           <p className="text-slate-500">{med.dose ?? "Dose not detected"}</p>
                         </div>
@@ -831,7 +831,7 @@ export default function ClinicalAIPage() {
                     <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
                       Referral Note
                     </h3>
-                    <p className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-[3px] px-4 py-3">
+                    <p className="text-sm text-slate-700 bg-slate-50 border border-line rounded-[3px] px-4 py-3">
                       {nlpResult.referral_note}
                     </p>
                   </div>
@@ -894,7 +894,7 @@ export default function ClinicalAIPage() {
                   setVitals((prev) => ({ ...prev, [key]: e.target.value }))
                 }
                 placeholder="—"
-                className="w-full text-sm border border-slate-200 rounded-[3px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-ink/10"
+                className="w-full text-sm border border-line rounded-[3px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-ink/10"
               />
             </div>
           ))}
@@ -966,7 +966,7 @@ export default function ClinicalAIPage() {
                 <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
                   AI Cluster Insights
                 </p>
-                <div className="bg-slate-50 border border-slate-200 rounded-[3px] p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                <div className="bg-slate-50 border border-line rounded-[3px] p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                   {predInsights}
                 </div>
               </div>
@@ -1056,7 +1056,7 @@ export default function ClinicalAIPage() {
                 </h3>
                 <div className="space-y-2">
                   {asArray(advancedRisk.top_risk_drivers).slice(0, 5).map((driver, i) => (
-                    <div key={`${driver.name}-${i}`} className="text-xs border-b border-slate-100 pb-2 last:border-0">
+                    <div key={`${driver.name}-${i}`} className="text-xs border-b border-line pb-2 last:border-0">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-semibold text-slate-800">{driver.name}</span>
                         <Pill tone={tierTone(driver.severity)}>{driver.score}</Pill>
@@ -1126,7 +1126,7 @@ export default function ClinicalAIPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
+                        <tr className="bg-slate-50 border-b border-line">
                           <th className="text-left px-3 py-2 text-slate-500 font-medium">Drug</th>
                           <th className="text-left px-3 py-2 text-slate-500 font-medium">Dose</th>
                           <th className="text-left px-3 py-2 text-slate-500 font-medium">Frequency</th>
@@ -1137,7 +1137,7 @@ export default function ClinicalAIPage() {
                         {carePlan.reminders.map((r, i) => (
                           <tr
                             key={i}
-                            className={`border-b border-slate-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}
+                            className={`border-b border-line ${i % 2 === 0 ? "bg-surface" : "bg-slate-50"}`}
                           >
                             <td className="px-3 py-2 font-medium text-slate-800">
                               {r.medication_name ?? r.drug}
@@ -1159,7 +1159,7 @@ export default function ClinicalAIPage() {
                   <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
                     Care Plan
                   </h3>
-                  <pre className="text-xs bg-slate-50 border border-slate-200 rounded-[3px] p-4 overflow-auto max-h-64 text-slate-700 whitespace-pre-wrap leading-relaxed">
+                  <pre className="text-xs bg-slate-50 border border-line rounded-[3px] p-4 overflow-auto max-h-64 text-slate-700 whitespace-pre-wrap leading-relaxed">
                     {carePlan.rawPlan}
                   </pre>
                 </div>
@@ -1202,7 +1202,7 @@ export default function ClinicalAIPage() {
                 <div
                   className={`absolute -left-4 mt-1 w-3 h-3 rounded-full border-2 border-white ${ entry.risk_tier === "CRITICAL" ? "bg-red-700" : entry.risk_tier === "HIGH" ? "bg-red-400" : entry.risk_tier === "MEDIUM" ? "bg-amber-400" : "bg-green-400" }`}
                 />
-                <div className="flex-1 bg-slate-50 border border-slate-200 rounded-[3px] p-3">
+                <div className="flex-1 bg-slate-50 border border-line rounded-[3px] p-3">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     {i === 0 && (
                       <span className="text-xs px-2 py-0.5 rounded-sm bg-sunken text-blue-700 border border-line-strong font-medium">

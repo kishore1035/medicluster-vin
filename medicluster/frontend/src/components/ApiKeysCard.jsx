@@ -48,7 +48,7 @@ export default function ApiKeysCard() {
 
   return (
     <div className="border-t border-ink overflow-hidden md:col-span-2">
-      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 bg-slate-50">
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-line bg-slate-50">
         <h2 className="font-semibold text-slate-800 text-sm flex-1">Chatbot API Keys Manager</h2>
       </div>
       <form onSubmit={handleSave} className="p-5 space-y-4">
@@ -67,7 +67,7 @@ export default function ApiKeysCard() {
                 type="text"
                 value={keys.ollamaHost}
                 onChange={(e) => setKeys({ ...keys, ollamaHost: e.target.value })}
-                className="w-full text-xs border border-slate-200 rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
+                className="w-full text-xs border border-line rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
               />
             </div>
             <div>
@@ -76,7 +76,7 @@ export default function ApiKeysCard() {
                 type="password"
                 value={keys.ollamaKey}
                 onChange={(e) => setKeys({ ...keys, ollamaKey: e.target.value })}
-                className="w-full text-xs border border-slate-200 rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
+                className="w-full text-xs border border-line rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
                 placeholder="Enter Ollama API key"
               />
             </div>
@@ -86,7 +86,7 @@ export default function ApiKeysCard() {
                 type="password"
                 value={keys.agentRouterKey}
                 onChange={(e) => setKeys({ ...keys, agentRouterKey: e.target.value })}
-                className="w-full text-xs border border-slate-200 rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
+                className="w-full text-xs border border-line rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
                 placeholder="Enter AgentRouter key"
               />
             </div>
@@ -96,7 +96,7 @@ export default function ApiKeysCard() {
                 type="password"
                 value={keys.omniRouteKey}
                 onChange={(e) => setKeys({ ...keys, omniRouteKey: e.target.value })}
-                className="w-full text-xs border border-slate-200 rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
+                className="w-full text-xs border border-line rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
                 placeholder="Enter OmniRoute key"
               />
             </div>

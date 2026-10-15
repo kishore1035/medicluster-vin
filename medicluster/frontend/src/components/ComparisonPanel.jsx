@@ -118,7 +118,7 @@ export default function ComparisonPanel({ allResults }) {
                     <Tooltip
                       content={({ active, payload }) =>
                         active && payload?.length ? (
-                          <div className="bg-white border border-line-strong rounded px-2 py-1 text-xs text-slate-700">
+                          <div className="bg-surface border border-line-strong rounded px-2 py-1 text-xs text-slate-700">
                             {payload[0].payload.x?.toFixed(2)}, {payload[0].payload.y?.toFixed(2)}
                           </div>
                         ) : null

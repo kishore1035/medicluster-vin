@@ -1,8 +1,16 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import { aiChat } from "../api/apiClient";
-import { Page } from "../components/ui";
+import { Page, linkCls } from "../components/ui";
 
 const ACCEPT = "image/jpeg,image/png,image/gif,image/webp";
+
+// Starter prompts shown before the first message.
+const CATEGORIES = [
+  { tag: "SKIN",  title: "Skin & rashes",  text: "I have an itchy red rash on my forearm" },
+  { tag: "X-RAY", title: "X-ray findings", text: "What does this X-ray finding mean?" },
+  { tag: "WOUND", title: "Wounds",         text: "My wound is swollen and warm — is it infected?" },
+  { tag: "EYE",   title: "Eyes",           text: "Red, watery eye for two days" },
+];
 
 const LANGUAGES = [
   { code: "en",  label: "English" },
@@ -75,7 +83,7 @@ export default function AskAIPage() {
   }, []);
 
   const scrollBottom = () =>
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
 
   const loadImage = useCallback((file) => {
     if (!file || !file.type.startsWith("image/")) {
@@ -87,7 +95,6 @@ export default function AskAIPage() {
       const dataUrl = e.target.result;
       const base64 = dataUrl.split(",")[1];
       setImage({ preview: dataUrl, base64, mediaType: file.type, name: file.name });
-      setMessages([]);
       setError(null);
     };
     reader.readAsDataURL(file);
@@ -101,7 +108,7 @@ export default function AskAIPage() {
   }, [loadImage]);
 
   const send = useCallback(async (question = "") => {
-    if (!image) return;
+    if (!image && !question.trim()) return;
     setLoading(true);
     setError(null);
 
@@ -112,7 +119,7 @@ export default function AskAIPage() {
     scrollBottom();
 
     try {
-      const data = await aiChat(image.base64, image.mediaType, history, question, language, userLocation);
+      const data = await aiChat(image?.base64, image?.mediaType, history, question, language, userLocation);
       setMessages([...next, { role: "assistant", content: data.reply }]);
       setInput("");
       scrollBottom();
@@ -122,7 +129,7 @@ export default function AskAIPage() {
     } finally {
       setLoading(false);
     }
-  }, [image, messages, userLocation]);
+  }, [image, messages, language, userLocation]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey && !loading) {
@@ -143,162 +150,106 @@ export default function AskAIPage() {
     setLanguage("en");
   };
 
+  const submit = () => {
+    if (loading) return;
+    if (input.trim() || (image && messages.length === 0)) send(input.trim());
+  };
+  const count = messages.length + (image ? 1 : 0);
+
   return (
     <Page
       title="CliniQ"
       sub="Chat about symptoms or share a medical image — get condition, prevention, treatment & medications."
-      actions={
-        <div className="flex items-center gap-3">
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            aria-label="Answer language" className="h-9 px-2 border border-line-strong rounded-[3px] bg-surface text-[13px] focus:outline-none focus:border-ink"
-          >
-            {LANGUAGES.map((l) => (
-              <option key={l.code} value={l.code}>{l.label}</option>
-            ))}
-          </select>
-          {image && (
-            <button onClick={reset} className="btn-secondary h-9 text-[13px]">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              New chat
-            </button>
-          )}
-        </div>
-      }
     >
-      {/* Body */}
-      <div className="flex flex-col max-w-3xl w-full gap-4">
+      <input ref={fileInputRef} type="file" accept={ACCEPT} className="hidden"
+        onChange={(e) => { if (e.target.files[0]) loadImage(e.target.files[0]); e.target.value = ""; }} />
 
-        {/* Upload zone — shown until image selected */}
-        {!image && (
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-[3px] cursor-pointer transition-all min-h-[320px] ${ dragOver ? "border-ink bg-sunken" : "border-slate-200 hover:border-line-strong hover:bg-slate-50" }`}
-          >
-            <input ref={fileInputRef} type="file" accept={ACCEPT} className="hidden"
-              onChange={(e) => e.target.files[0] && loadImage(e.target.files[0])} />
-            <div className="flex flex-col items-center gap-3 text-center px-6">
-              <div className="w-16 h-16 rounded-[3px] bg-sunken flex items-center justify-center">
-                <svg className="w-8 h-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-700">
-                  <span className="text-slate-600">Click to upload</span> or drag & drop
-                </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Skin conditions, rashes, X-rays, wounds, eyes, and more
-                </p>
-                <p className="text-xs text-slate-300 mt-0.5">JPEG · PNG · GIF · WebP</p>
-              </div>
-            </div>
+      <div className="max-w-[820px] w-full border-t border-ink"
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}>
+        <div className="flex justify-between items-center gap-3 py-2.5 border-b border-line text-xs text-slate-500">
+          <span className="font-mono tracking-[0.04em] uppercase">
+            {count ? `Conversation · ${count} message${count === 1 ? "" : "s"}` : "New conversation"}
+          </span>
+          <div className="flex gap-4 items-center">
+            <label className="flex items-center gap-1">Reply in
+              <select value={language} onChange={(e) => setLanguage(e.target.value)} aria-label="Reply language"
+                className="bg-transparent text-ink focus:outline-none">
+                {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+              </select>
+            </label>
+            {count > 0 && <button type="button" onClick={reset} className={linkCls}>New chat</button>}
           </div>
-        )}
+        </div>
 
-        {/* Chat messages */}
-        {image && (
-          <div className="flex-1 space-y-4 overflow-y-auto pb-2">
-            {/* Image bubble */}
-            <div className="flex justify-end">
-              <div className="bg-ink rounded-[3px] rounded-tr-sm overflow-hidden max-w-[240px]">
-                <img src={image.preview} alt={image.name} className="w-full object-cover max-h-48" />
-                <p className="text-paper/80 text-xs px-3 py-1.5 truncate">{image.name}</p>
+        <div className={`flex flex-col gap-7 py-7 ${dragOver ? "bg-sunken" : ""}`} role="log" aria-live="polite">
+          {count === 0 && (
+            <div className="flex flex-col gap-6 pt-4 pb-2">
+              <p className="font-serif text-[28px] leading-[1.25] tracking-[-0.01em] max-w-[600px]">
+                Describe a symptom or attach a photo. CliniQ will suggest the likely condition, prevention, treatment and medications.
+              </p>
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(140px,100%),1fr))] gap-4">
+                {CATEGORIES.map((c) => (
+                  <button key={c.tag} type="button" onClick={() => send(c.text)} disabled={loading}
+                    className="flex flex-col gap-2 text-left hover:opacity-80">
+                    <div className="w-full aspect-[4/3] rounded-sm flex items-end p-2 bg-[repeating-linear-gradient(135deg,#e9e6df_0_10px,#dcd8cf_10px_20px)]">
+                      <span className="font-mono text-[11px] tracking-[0.06em] text-slate-600">{c.tag}</span>
+                    </div>
+                    <span className="text-[13.5px] font-medium">{c.title}</span>
+                    <span className="text-[12.5px] text-slate-600 leading-snug">“{c.text}” →</span>
+                  </button>
+                ))}
               </div>
             </div>
+          )}
 
-            {/* Conversation messages */}
-            {messages.map((msg, i) =>
-              msg.role === "user" ? (
-                <div key={i} className="flex justify-end">
-                  <div className="bg-ink text-paper rounded-[3px] rounded-tr-sm px-4 py-2.5 text-sm max-w-[75%]">
-                    {msg.content}
-                  </div>
-                </div>
-              ) : (
-                <div key={i} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-sunken flex items-center justify-center shrink-0 mt-0.5">
-                    <svg className="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                  </div>
-                  <div className="bg-white border border-slate-100 rounded-[3px] rounded-tl-sm px-4 py-3 text-sm text-slate-700 leading-relaxed flex-1">
-                    {renderMarkdown(msg.content)}
-                  </div>
-                </div>
-              )
-            )}
-
-            {/* Loading bubble */}
-            {loading && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-sunken flex items-center justify-center shrink-0">
-                  <div className="spinner w-4 h-4" />
-                </div>
-                <div className="bg-white border border-slate-100 rounded-[3px] rounded-tl-sm px-4 py-3 text-sm text-slate-400 italic">
-                  Analyzing your image…
-                </div>
-              </div>
-            )}
-
-            <div ref={bottomRef} />
-          </div>
-        )}
-
-        {error && (
-          <p className="text-xs text-red-500 text-center">{error}</p>
-        )}
-
-        {/* Input area */}
-        {image && (
-          <div className="bg-white border border-slate-200 rounded-[3px] overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-1.5 border-b border-slate-100">
-              <img src={image.preview} alt="" className="w-5 h-5 rounded object-cover" />
-              <span className="text-xs text-slate-400 truncate flex-1">{image.name}</span>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="text-xs text-slate-600 hover:text-ink font-medium shrink-0"
-              >
-                Change
-              </button>
-              <input ref={fileInputRef} type="file" accept={ACCEPT} className="hidden"
-                onChange={(e) => e.target.files[0] && loadImage(e.target.files[0])} />
+          {image && (
+            <div className="flex flex-col items-end gap-2 pl-[20%]">
+              <figure className="w-[200px]">
+                <img src={image.preview} alt={image.name} className="w-full aspect-[4/3] object-cover rounded-sm" />
+                <figcaption className="font-mono text-[11px] text-slate-500 mt-1 truncate">{image.name}</figcaption>
+              </figure>
             </div>
-            <div className="flex items-end gap-2 px-3 py-2">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={messages.length === 0 ? "Ask something, or press Enter to analyze…" : "Ask a follow-up question…"}
-                disabled={loading}
-                rows={1}
-                className="flex-1 resize-none text-sm text-slate-700 placeholder-slate-400 outline-none bg-transparent disabled:opacity-50 py-1"
-                style={{ maxHeight: "120px", overflowY: "auto" }}
-              />
-              <button
-                onClick={() => {
-                  if (messages.length === 0) send(input.trim());
-                  else if (input.trim()) send(input.trim());
-                }}
-                disabled={loading || (messages.length > 0 && !input.trim())}
-                className="w-8 h-8 rounded-[3px] bg-ink hover:bg-slate-700 flex items-center justify-center shrink-0 transition-colors disabled:opacity-40"
-              >
-                <svg className="w-4 h-4 text-paper" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </button>
+          )}
+
+          {messages.map((msg, i) => msg.role === "user" ? (
+            <div key={i} className="flex justify-end pl-[20%]">
+              <div className="bg-ink text-paper px-3.5 py-2.5 text-[14px] leading-normal rounded-sm">{msg.content}</div>
             </div>
+          ) : (
+            <div key={i} className="grid grid-cols-[28px_minmax(0,1fr)] gap-3.5 pr-[8%]">
+              <span className="w-7 h-7 grid place-items-center border border-ink font-mono text-[11px] rounded-sm" aria-hidden="true">Q</span>
+              <div className="text-[14px] text-slate-600 leading-relaxed">{renderMarkdown(msg.content)}</div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="grid grid-cols-[28px_minmax(0,1fr)] gap-3.5 items-center">
+              <span className="w-7 h-7 grid place-items-center border border-ink rounded-sm"><span className="spinner w-3.5 h-3.5" /></span>
+              <span className="eyebrow">{image ? "Analyzing image…" : "Thinking…"}</span>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        {error && <p role="alert" className="text-[13px] text-red-700 pb-3">{error}</p>}
+
+        <div className="border border-ink rounded-[3px] bg-surface">
+          <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
+            placeholder={count ? "Ask a follow-up, or describe a symptom…" : "Describe a symptom…"} disabled={loading} rows={2}
+            aria-label="Message" className="w-full resize-none bg-transparent px-3 pt-3 text-[14px] focus:outline-none disabled:opacity-50" />
+          <div className="flex items-center gap-3 px-3 pb-3 text-xs">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="text-slate-600 hover:text-ink">
+              {image ? "Change image" : "+ Attach image"}
+            </button>
+            <span className="font-mono text-slate-500">JPEG · PNG · GIF · WebP</span>
+            <button type="button" onClick={submit} disabled={loading || (!input.trim() && !(image && messages.length === 0))}
+              className="btn-primary h-8 px-3.5 text-[13px] ml-auto">
+              {image && messages.length === 0 && !input.trim() ? "Analyze" : "Send"}
+            </button>
           </div>
-        )}
+        </div>
+        <p className="pt-6 text-xs text-slate-500">AI guidance only. Not a diagnosis — consult a clinician before starting treatment.</p>
       </div>
     </Page>
   );

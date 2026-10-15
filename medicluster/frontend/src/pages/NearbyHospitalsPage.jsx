@@ -174,7 +174,7 @@ export default function NearbyHospitalsPage() {
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 placeholder="City, area, or address…"
-                className="flex-1 text-sm border border-slate-200 rounded-[3px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink/10 text-slate-700 placeholder:text-slate-400"
+                className="flex-1 text-sm border border-line rounded-[3px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink/10 text-slate-700 placeholder:text-slate-400"
               />
               <button
                 onClick={handleSearch}
@@ -200,7 +200,7 @@ export default function NearbyHospitalsPage() {
               <div className="flex gap-1.5">
                 {[2, 5, 10, 20].map(r => (
                   <button key={r} onClick={() => handleRadiusChange(r)}
-                    className={`flex-1 py-1.5 rounded-[3px] text-xs font-semibold border transition-colors ${ radius === r ? 'bg-ink text-paper border-ink' : 'border-slate-200 text-slate-600 hover:border-line-strong' }`}>
+                    className={`flex-1 py-1.5 rounded-[3px] text-xs font-semibold border transition-colors ${ radius === r ? 'bg-ink text-paper border-ink' : 'border-line text-slate-600 hover:border-line-strong' }`}>
                     {r}km
                   </button>
                 ))}
@@ -221,7 +221,7 @@ export default function NearbyHospitalsPage() {
 
           {loading && (
             <div className="border-t border-ink p-6 text-center">
-              <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
+              <div className="w-8 h-8 border-2 border-line border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
               <p className="text-sm text-slate-500">Searching nearby hospitals…</p>
               <p className="text-xs text-slate-400 mt-1">Querying Google Places</p>
             </div>
@@ -239,7 +239,7 @@ export default function NearbyHospitalsPage() {
 
           {!loading && hospitals.length > 0 && (
             <div className="border-t border-ink overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white">
+              <div className="px-4 py-3 border-b border-line flex items-center justify-between sticky top-0 bg-surface">
                 <p className="text-xs font-semibold text-slate-700">
                   {hospitals.length} result{hospitals.length !== 1 ? 's' : ''} found
                 </p>
@@ -284,7 +284,7 @@ export default function NearbyHospitalsPage() {
         </div>
 
         {/* ── Map ── */}
-        <div className="flex-1 rounded-[3px] border border-slate-200 overflow-hidden relative" style={{ minHeight: 500 }}>
+        <div className="flex-1 rounded-[3px] border border-line overflow-hidden relative" style={{ minHeight: 500 }}>
           {isLoaded ? (
             <GoogleMap
               mapContainerStyle={{ width: '100%', height: '100%' }}
@@ -359,7 +359,7 @@ export default function NearbyHospitalsPage() {
           {/* Hint overlay when no location selected */}
           {isLoaded && !center && (
             <div style={{ pointerEvents: 'none' }} className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-white/90 backdrop-blur-sm rounded-[3px] px-6 py-4 border border-slate-200 text-center max-w-xs">
+              <div className="bg-surface/90 backdrop-blur-sm rounded-[3px] px-6 py-4 border border-line text-center max-w-xs">
                 <p className="text-sm font-semibold text-slate-700">Pick a location</p>
                 <p className="text-xs text-slate-500 mt-1">
                   Search an address, use GPS, or click anywhere on the map to find hospitals near that spot

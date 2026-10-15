@@ -5,7 +5,7 @@ const PRIORITY_CLASS = {
   Immediate: "bg-surface text-red-700 border-red-200",
   High: "bg-surface text-orange-700 border-orange-200",
   Routine: "bg-sunken text-blue-700 border-line-strong",
-  Monitor: "bg-slate-50 text-slate-600 border-slate-200",
+  Monitor: "bg-slate-50 text-slate-600 border-line",
 };
 
 function riskDistribution(result) {
@@ -51,7 +51,7 @@ function compactResult(result) {
 
 function SourcePill({ source }) {
   return (
-    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-sm border ${ source === "ai" ? "bg-sunken text-ink border-line-strong" : "bg-slate-50 text-slate-500 border-slate-200" }`}>
+    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-sm border ${ source === "ai" ? "bg-sunken text-ink border-line-strong" : "bg-slate-50 text-slate-500 border-line" }`}>
       {source === "ai" ? "AI" : "Local"}
     </span>
   );
@@ -121,7 +121,7 @@ export default function AIClusterInsights({ result }) {
             ["Care actions", "Follow-up priorities by cluster"],
             ["Watchlist", "High-acuity patients to review first"],
           ].map(([title, copy]) => (
-            <div key={title} className="rounded-[3px] border border-slate-100 bg-slate-50 px-3 py-2">
+            <div key={title} className="rounded-[3px] border border-line bg-slate-50 px-3 py-2">
               <p className="text-xs font-semibold text-slate-700">{title}</p>
               <p className="text-xs text-slate-400 mt-0.5">{copy}</p>
             </div>
@@ -141,7 +141,7 @@ export default function AIClusterInsights({ result }) {
               {(insights.risk_drivers ?? []).length === 0 ? (
                 <p className="text-xs text-slate-400">No dominant drivers returned.</p>
               ) : insights.risk_drivers.map((driver) => (
-                <div key={`${driver.feature}-${driver.signal}`} className="rounded-[3px] border border-slate-100 bg-slate-50 p-3">
+                <div key={`${driver.feature}-${driver.signal}`} className="rounded-[3px] border border-line bg-slate-50 p-3">
                   <p className="text-xs font-mono font-semibold text-slate-800">{driver.feature}</p>
                   <p className="text-xs text-blue-700 mt-1">{driver.signal}</p>
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">{driver.rationale}</p>
@@ -152,7 +152,7 @@ export default function AIClusterInsights({ result }) {
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Care Actions</p>
               {(insights.cluster_actions ?? []).map((action) => (
-                <div key={`${action.cluster_id}-${action.action}`} className="rounded-[3px] border border-slate-100 bg-white p-3">
+                <div key={`${action.cluster_id}-${action.action}`} className="rounded-[3px] border border-line bg-surface p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-mono text-slate-500">Cluster {action.cluster_id ?? "-"}</span>
                     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-sm border ${PRIORITY_CLASS[action.priority] ?? PRIORITY_CLASS.Monitor}`}>
@@ -169,7 +169,7 @@ export default function AIClusterInsights({ result }) {
               {(insights.patient_watchlist ?? []).length === 0 ? (
                 <p className="text-xs text-slate-400">No high-acuity patients were returned.</p>
               ) : insights.patient_watchlist.map((patient) => (
-                <div key={`${patient.patient_id}-${patient.reason}`} className="rounded-[3px] border border-slate-100 bg-slate-50 p-3">
+                <div key={`${patient.patient_id}-${patient.reason}`} className="rounded-[3px] border border-line bg-slate-50 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-mono font-semibold text-slate-800">{patient.patient_id}</span>
                     <span className="text-[11px] font-semibold text-red-700 bg-surface border border-red-100 rounded-sm px-2 py-0.5">
@@ -193,7 +193,7 @@ export default function AIClusterInsights({ result }) {
           )}
 
           {insights.safety_note && (
-            <p className="text-xs text-slate-400 border-t border-slate-100 pt-3">{insights.safety_note}</p>
+            <p className="text-xs text-slate-400 border-t border-line pt-3">{insights.safety_note}</p>
           )}
         </div>
       )}

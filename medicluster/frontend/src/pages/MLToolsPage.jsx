@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import ApiKeysCard from "../components/ApiKeysCard";
 import {
   analyzeNotes, calcMews, forecastVitals,
   getOptimalK, detectAnomalies, explainClusters,
   checkDrugInteractions, askPatients, reduceDimensions,
 } from "../api/apiClient";
-import { Page, Section } from "../components/ui";
+import { Page, linkCls } from "../components/ui";
+
+// The selected tool: whether to start from sample input, its idle copy, and how to load the sample.
+const ToolCtx = createContext({ sample: false, idle: null, loadSample: () => {} });
 
 // ── tiny helpers ──────────────────────────────────────────────────────────────
 const SAMPLE_PATIENTS = [
@@ -23,17 +26,44 @@ const SAMPLE_PATIENTS = [
 
 function Card({ title, badge, children }) {
   return (
-    <Section title={title} aside={badge && <span className="font-mono text-[11px] text-slate-500">{badge}</span>}>
-      <div className="pt-4">{children}</div>
-    </Section>
+    <section className="flex flex-col gap-1 min-w-0">
+      <div className="flex justify-between items-baseline gap-4 pb-3 border-b border-ink">
+        <h2 className="font-serif text-[30px] leading-tight tracking-[-0.01em]">{title}</h2>
+        {badge && <span className="font-mono text-[11px] text-slate-500">{badge}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Idle() {
+  const { idle, loadSample } = useContext(ToolCtx);
+  if (!idle) return null;
+  return (
+    <div className="flex flex-col gap-4 pt-[18px] mt-5 border-t border-line">
+      <div className="flex justify-between items-baseline gap-3 flex-wrap">
+        <span className="flex items-center gap-2 eyebrow"><span className="w-1.5 h-1.5 bg-risk-low" />Ready · awaiting input</span>
+        <button type="button" onClick={loadSample} className={`text-[13px] ${linkCls}`}>Load sample input</button>
+      </div>
+      <span className="text-[13px] text-slate-600 leading-normal max-w-[540px]">{idle.text}</span>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(150px,100%),1fr))] gap-3" aria-hidden="true">
+        {idle.cols.map((c) => (
+          <div key={c} className="flex flex-col gap-[9px] p-3.5 border border-dashed border-line-strong rounded-sm">
+            <span className="font-mono text-[10.5px] tracking-[0.06em] uppercase text-slate-500">{c}</span>
+            <span className="h-[7px] w-[72%] bg-sunken" />
+            <span className="h-[7px] w-[48%] bg-sunken" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
 function Result({ data, loading }) {
-  if (loading) return <p className="text-xs text-slate-400 italic mt-3">Running…</p>;
-  if (!data) return null;
+  if (loading) return <p className="eyebrow mt-5">Running…</p>;
+  if (!data) return <Idle />;
   return (
-    <pre className="mt-3 text-xs bg-sunken p-3 overflow-auto max-h-64 font-mono whitespace-pre-wrap">
+    <pre className="mt-5 text-xs bg-sunken p-3 overflow-auto max-h-80 font-mono whitespace-pre-wrap">
       {JSON.stringify(data, null, 2)}
     </pre>
   );
@@ -44,7 +74,7 @@ function Btn({ onClick, loading, children }) {
     <button
       onClick={onClick}
       disabled={loading}
-      className="btn-primary mt-3 h-9 text-[13px]"
+      className="btn-primary mt-4 h-9 px-4 text-[13px] self-start w-fit"
     >
       {loading ? "Running…" : children}
     </button>
@@ -53,21 +83,21 @@ function Btn({ onClick, loading, children }) {
 
 function Field({ label, value, onChange, type = "text", rows }) {
   return (
-    <div className="mt-3">
-      <label className="block text-xs text-slate-500 mb-1">{label}</label>
+    <div className="mt-4">
+      <label className="block text-xs text-slate-600 mb-1.5">{label}</label>
       {rows ? (
         <textarea
           rows={rows}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full text-xs border border-slate-200 rounded-[3px] p-2 resize-y font-mono"
+          className="w-full text-[13px] border border-line-strong rounded-[3px] bg-surface p-3 resize-y font-mono leading-relaxed focus:outline-none focus:border-ink"
         />
       ) : (
         <input
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full text-xs border border-slate-200 rounded-[3px] p-2"
+          className="w-full h-9 text-[13px] border border-line-strong rounded-[3px] bg-surface px-3 font-mono focus:outline-none focus:border-ink"
         />
       )}
     </div>
@@ -77,9 +107,10 @@ function Field({ label, value, onChange, type = "text", rows }) {
 // ── Sections ──────────────────────────────────────────────────────────────────
 
 function NLPNotes() {
-  const [notes, setNotes] = useState(
-    "Patient admitted with acute pneumonia. HR 115 bpm. On amoxicillin and furosemide. HbA1c was 8.2%. Condition deteriorating."
-  );
+  const { sample } = useContext(ToolCtx);
+  const [notes, setNotes] = useState(sample
+    ? "Patient admitted with acute pneumonia. HR 115 bpm. On amoxicillin and furosemide. HbA1c was 8.2%. Condition deteriorating."
+    : "");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -91,9 +122,10 @@ function NLPNotes() {
   };
 
   return (
-    <Card title="Clinical Notes Analyzer" badge="POST /analyze-notes">
+    <Card title="Notes analyzer" badge="POST /analyze-notes">
       <Field label="Free-text doctor notes" value={notes} onChange={setNotes} rows={4} />
-      <Btn onClick={run} loading={loading}>Analyze Notes →</Btn>
+      <Btn onClick={run} loading={loading}>Analyze notes</Btn>
+      {!result && !loading && <Idle />}
       {result && (
         <div className="mt-3 space-y-2">
           <div className="flex flex-wrap gap-2">
@@ -131,7 +163,8 @@ function NLPNotes() {
 }
 
 function DrugInteractions() {
-  const [meds, setMeds] = useState("warfarin, aspirin, furosemide, digoxin");
+  const { sample } = useContext(ToolCtx);
+  const [meds, setMeds] = useState(sample ? "warfarin, aspirin, furosemide, digoxin" : "");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -143,9 +176,10 @@ function DrugInteractions() {
   };
 
   return (
-    <Card title="Drug Interaction Checker" badge="POST /drug-interactions">
+    <Card title="Drug interactions" badge="POST /drug-interactions">
       <Field label="Medications (comma-separated)" value={meds} onChange={setMeds} />
-      <Btn onClick={run} loading={loading}>Check Interactions →</Btn>
+      <Btn onClick={run} loading={loading}>Check interactions</Btn>
+      {!result && !loading && <Idle />}
       {result && (
         <div className="mt-3 space-y-2">
           <p className={`text-xs font-semibold ${result.has_major_interaction ? "text-red-600" : "text-green-600"}`}>
@@ -163,7 +197,10 @@ function DrugInteractions() {
 }
 
 function MewsScore() {
-  const [vals, setVals] = useState({ systolic_bp: 82, heart_rate: 118, respiratory_rate: 26, temperature: 38.9, consciousness: 1 });
+  const { sample } = useContext(ToolCtx);
+  const [vals, setVals] = useState(sample
+    ? { systolic_bp: 82, heart_rate: 118, respiratory_rate: 26, temperature: 38.9, consciousness: 1 }
+    : { systolic_bp: "", heart_rate: "", respiratory_rate: "", temperature: "", consciousness: "" });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -179,13 +216,14 @@ function MewsScore() {
   const col = alertColor[result?.alert_level] || "slate";
 
   return (
-    <Card title="MEWS Score Calculator" badge="POST /mews">
+    <Card title="MEWS score" badge="POST /mews">
       <div className="grid grid-cols-2 gap-2">
         {Object.entries(vals).map(([k, v]) => (
           <Field key={k} label={k.replace(/_/g, " ")} value={v} onChange={val => set(k, val)} type="number" />
         ))}
       </div>
-      <Btn onClick={run} loading={loading}>Calculate MEWS →</Btn>
+      <Btn onClick={run} loading={loading}>Calculate MEWS</Btn>
+      {!result && !loading && <Idle />}
       {result && !result.error && (
         <div className={`mt-3 rounded-[3px] p-3 border ${col === "red" ? "bg-surface border-red-300" : col === "orange" ? "bg-surface border-orange-300" : "bg-surface border-green-300"}`}>
           <p className="text-2xl font-black text-slate-800">Score: {result.mews_score}</p>
@@ -198,8 +236,9 @@ function MewsScore() {
 }
 
 function VitalForecast() {
-  const [hr, setHr] = useState("70, 72, 75, 78, 82, 86");
-  const [bp, setBp] = useState("120, 118, 115, 112, 108");
+  const { sample } = useContext(ToolCtx);
+  const [hr, setHr] = useState(sample ? "70, 72, 75, 78, 82, 86" : "");
+  const [bp, setBp] = useState(sample ? "120, 118, 115, 112, 108" : "");
   const [steps, setSteps] = useState("3");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -216,15 +255,16 @@ function VitalForecast() {
   };
 
   return (
-    <Card title="Vital Signs Forecasting" badge="POST /forecast-vitals">
+    <Card title="Vital forecast" badge="POST /forecast-vitals">
       <Field label="Heart Rate history (comma-separated readings)" value={hr} onChange={setHr} />
       <Field label="Systolic BP history" value={bp} onChange={setBp} />
       <Field label="Steps to forecast" value={steps} onChange={setSteps} type="number" />
-      <Btn onClick={run} loading={loading}>Forecast →</Btn>
+      <Btn onClick={run} loading={loading}>Forecast</Btn>
+      {!result && !loading && <Idle />}
       {result && !result.error && (
         <div className="mt-3 space-y-2">
           {Object.entries(result.forecasts || {}).map(([vital, fc]) => (
-            <div key={vital} className="text-xs bg-slate-50 rounded-[3px] p-2 border border-slate-200">
+            <div key={vital} className="text-xs bg-slate-50 rounded-[3px] p-2 border border-line">
               <p className="font-semibold text-slate-700 capitalize">{vital.replace(/_/g, " ")}</p>
               <p className="text-blue-600">Next {steps}: {fc.forecasts?.join(" → ")}</p>
               <p className="text-slate-400">Method: {fc.method}</p>
@@ -255,13 +295,14 @@ function OptimalK() {
   };
 
   return (
-    <Card title="Optimal-K Selector" badge="POST /optimal-k">
+    <Card title="Optimal K" badge="POST /optimal-k">
       <p className="text-xs text-slate-400">Uses built-in sample patient data. Sweeps K={kMin}–{kMax} and recommends best cluster count.</p>
       <div className="flex gap-3 mt-3">
         <Field label="K min" value={kMin} onChange={setKMin} type="number" />
         <Field label="K max" value={kMax} onChange={setKMax} type="number" />
       </div>
-      <Btn onClick={run} loading={loading}>Find Best K →</Btn>
+      <Btn onClick={run} loading={loading}>Find best K</Btn>
+      {!result && !loading && <Idle />}
       {result && !result.error && (
         <div className="mt-3">
           <div className="flex gap-3 flex-wrap">
@@ -270,7 +311,7 @@ function OptimalK() {
               { label: "Elbow K", value: result.elbow_k },
               { label: "Silhouette K", value: result.silhouette_k },
             ].map(({ label, value, highlight }) => (
-              <div key={label} className={`text-xs rounded-[3px] px-3 py-2 border ${highlight ? "bg-ink text-paper border-ink" : "bg-slate-50 text-slate-700 border-slate-200"}`}>
+              <div key={label} className={`text-xs rounded-[3px] px-3 py-2 border ${highlight ? "bg-ink text-paper border-ink" : "bg-slate-50 text-slate-700 border-line"}`}>
                 <p className="opacity-70">{label}</p>
                 <p className="text-xl font-black">{value}</p>
               </div>
@@ -298,10 +339,11 @@ function AnomalyDetection() {
   };
 
   return (
-    <Card title="Anomaly Detection" badge="POST /detect-anomalies">
+    <Card title="Anomaly detection" badge="POST /detect-anomalies">
       <p className="text-xs text-slate-400">Uses sample data with 1 extreme outlier injected (age=200, BP=999). Isolation Forest flags it.</p>
       <Field label="Contamination (expected anomaly %" value={contam} onChange={setContam} type="number" />
-      <Btn onClick={run} loading={loading}>Detect Anomalies →</Btn>
+      <Btn onClick={run} loading={loading}>Detect anomalies</Btn>
+      {!result && !loading && <Idle />}
       {result && !result.error && (
         <div className="mt-3 space-y-2">
           <p className="text-sm font-semibold text-slate-700">{result.anomaly_count} anomal{result.anomaly_count === 1 ? "y" : "ies"} detected</p>
@@ -332,9 +374,10 @@ function ShapExplain() {
   };
 
   return (
-    <Card title="SHAP Feature Importance" badge="POST /explain">
+    <Card title="SHAP drivers" badge="POST /explain">
       <p className="text-xs text-slate-400">Shows which features drive cluster assignments most. Uses sample patient data.</p>
-      <Btn onClick={run} loading={loading}>Compute SHAP →</Btn>
+      <Btn onClick={run} loading={loading}>Compute SHAP</Btn>
+      {!result && !loading && <Idle />}
       {result && !result.error && (
         <div className="mt-3 space-y-1">
           <p className="text-xs font-semibold text-slate-600 mb-2">Global Feature Importance</p>
@@ -358,7 +401,8 @@ function ShapExplain() {
 }
 
 function PatientChatbot() {
-  const [query, setQuery] = useState("Which High Risk patients have age over 60?");
+  const { sample } = useContext(ToolCtx);
+  const [query, setQuery] = useState(sample ? "Which High Risk patients have age over 60?" : "");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -378,10 +422,11 @@ function PatientChatbot() {
   };
 
   return (
-    <Card title="Patient Q&A Chatbot" badge="POST /ask">
+    <Card title="Patient Q&A" badge="POST /ask">
       <Field label='Ask a question (e.g. "Which High Risk patients?")'
         value={query} onChange={setQuery} />
-      <Btn onClick={run} loading={loading}>Ask →</Btn>
+      <Btn onClick={run} loading={loading}>Ask</Btn>
+      {!result && !loading && <Idle />}
       {result && !result.error && (
         <div className="mt-3 space-y-2">
           <div className="bg-sunken border border-line-strong rounded-[3px] p-3 text-sm text-blue-800">{result.answer}</div>
@@ -389,7 +434,7 @@ function PatientChatbot() {
             <div>
               <p className="text-xs text-slate-500 mb-1">Matched {result.matched_count} patient(s):</p>
               {result.matched_patients.slice(0, 5).map(p => (
-                <div key={p.patient_id} className="text-xs bg-slate-50 border border-slate-200 rounded-[3px] px-3 py-1.5 mb-1 flex gap-3">
+                <div key={p.patient_id} className="text-xs bg-slate-50 border border-line rounded-[3px] px-3 py-1.5 mb-1 flex gap-3">
                   <span className="font-mono text-slate-600">{p.patient_id}</span>
                   <span className={`font-semibold ${p.risk_tier === "Critical" ? "text-red-600" : p.risk_tier === "High" ? "text-orange-500" : "text-green-600"}`}>{p.risk_tier}</span>
                   <span className="text-slate-400">Age {p.age}</span>
@@ -404,20 +449,58 @@ function PatientChatbot() {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
+const TOOLS = [
+  { id: "notes",    label: "Notes analyzer",    ep: "/analyze-notes",    C: NLPNotes,
+    idle: { text: "Paste or type a clinical note. Entities are extracted and grouped by type.", cols: ["Conditions", "Medications", "Vitals & labs"] } },
+  { id: "drugs",    label: "Drug interactions", ep: "/drug-interactions", C: DrugInteractions,
+    idle: { text: "Add two or more medications. Each interacting pair is listed with its severity and mechanism.", cols: ["Drug pair", "Severity", "Mechanism"] } },
+  { id: "mews",     label: "MEWS score",        ep: "/mews",              C: MewsScore,
+    idle: { text: "Enter the five vitals. Each is scored 0–3 and summed into a MEWS with a recommended response.", cols: ["Score", "Risk band", "Response"] } },
+  { id: "forecast", label: "Vital forecast",    ep: "/forecast-vitals",   C: VitalForecast,
+    idle: { text: "Enter at least six comma-separated readings. The next hours are projected with a confidence band.", cols: ["Trend", "Projection", "Alert"] } },
+  { id: "optk",     label: "Optimal K",         ep: "/optimal-k",         C: OptimalK,
+    idle: { text: "Pick a K range. Each K is scored on the sample dataset and the best one is recommended.", cols: ["K", "Silhouette", "Recommended"] } },
+  { id: "anomaly",  label: "Anomaly detection", ep: "/detect-anomalies",  C: AnomalyDetection,
+    idle: { text: "Set the expected share of outliers. Patients that don’t fit any cluster are flagged.", cols: ["Patient", "Score", "Flag"] } },
+  { id: "shap",     label: "SHAP drivers",      ep: "/explain",           C: ShapExplain,
+    idle: { text: "Pick an algorithm. Each feature’s contribution to the clustering is ranked.", cols: ["Feature", "Mean |SHAP|", "Rank"] } },
+  { id: "ask",      label: "Patient Q&A",       ep: "/ask",               C: PatientChatbot,
+    idle: { text: "Ask a question about the patient population in plain language.", cols: ["Answer", "Matched patients", "Source"] } },
+];
+
 export default function MLToolsPage() {
+  const [toolId, setToolId] = useState(TOOLS[0].id);
+  const [showKeys, setShowKeys] = useState(false);
+  const [samples, setSamples] = useState({});   // toolId → load counter (remounts the tool with sample input)
+  const tool = TOOLS.find((t) => t.id === toolId);
+  const Tool = tool.C;
+  const ctx = { sample: !!samples[toolId], idle: tool.idle, loadSample: () => setSamples((s) => ({ ...s, [toolId]: (s[toolId] || 0) + 1 })) };
+
   return (
     <Page title="ML & NLP tools" sub="Clinical notes analysis, MEWS scoring, vital forecasting and drug interactions.">
-      {/* Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-12">
-        <ApiKeysCard />
-        <NLPNotes />
-        <DrugInteractions />
-        <MewsScore />
-        <VitalForecast />
-        <OptimalK />
-        <AnomalyDetection />
-        <ShapExplain />
-        <PatientChatbot />
+      <div className="grid gap-10 items-start lg:grid-cols-[320px_minmax(0,1fr)]">
+        <nav aria-label="Tools" className="flex flex-col">
+          {TOOLS.map((t) => {
+            const on = t.id === toolId && !showKeys;
+            return (
+              <button key={t.id} type="button" onClick={() => { setToolId(t.id); setShowKeys(false); }} aria-current={on ? "page" : undefined}
+                className={`flex flex-col gap-0.5 px-2 py-2.5 border-b border-line text-left ${on ? "bg-ink text-paper" : "hover:bg-sunken"}`}>
+                <span className="text-[13.5px] font-medium">{t.label}</span>
+                <span className={`font-mono text-[11px] ${on ? "text-paper/70" : "text-slate-500"}`}>{t.ep}</span>
+              </button>
+            );
+          })}
+          <div className="flex flex-col gap-1 px-2 pt-6">
+            <span className="eyebrow">API keys</span>
+            <button type="button" onClick={() => setShowKeys(true)} className={`self-start text-xs ${linkCls}`}>Manage</button>
+          </div>
+        </nav>
+
+        {showKeys ? <ApiKeysCard /> : (
+          <ToolCtx.Provider value={ctx}>
+            <Tool key={`${toolId}-${samples[toolId] || 0}`} />
+          </ToolCtx.Provider>
+        )}
       </div>
     </Page>
   );

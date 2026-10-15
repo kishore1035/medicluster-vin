@@ -14,7 +14,7 @@ function CustomTooltip({ active, payload }) {
   const top3 = features.slice(0, 3);
 
   return (
-    <div className="bg-white border border-line-strong rounded-[3px] p-3 text-xs">
+    <div className="bg-surface border border-line-strong rounded-[3px] p-3 text-xs">
       <p className="font-mono text-blue-700 mb-1">{d.patient_id}</p>
       <p className="mb-1">
         Risk:{" "}
@@ -120,7 +120,7 @@ function AxisSelect({ label, value, options, onChange }) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="text-xs bg-white border border-line-strong rounded px-2 py-1 text-slate-700 font-mono focus:outline-none focus:border-ink"
+        className="text-xs bg-surface border border-line-strong rounded px-2 py-1 text-slate-700 font-mono focus:outline-none focus:border-ink"
       >
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>

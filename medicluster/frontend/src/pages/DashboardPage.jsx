@@ -31,8 +31,8 @@ function PatientDetailModal({ patient, clusterProfiles, featureNames, onClose })
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-[3px] w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between p-4 border-b border-slate-100">
+      <div className="bg-surface rounded-[3px] w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between p-4 border-b border-line">
           <div>
             <p className="font-mono text-blue-700 font-semibold text-sm">{patient.patient_id ?? "—"}</p>
             <div className="flex items-center gap-2 mt-1">

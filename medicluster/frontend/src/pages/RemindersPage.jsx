@@ -91,7 +91,7 @@ function AddReminderForm({ patientId, onAdded }) {
             value={med}
             onChange={(e) => setMed(e.target.value)}
             placeholder="e.g. Metformin"
-            className="w-full text-sm border border-slate-200 rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
+            className="w-full text-sm border border-line rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
           />
         </div>
         <div>
@@ -101,7 +101,7 @@ function AddReminderForm({ patientId, onAdded }) {
             value={dosage}
             onChange={(e) => setDosage(e.target.value)}
             placeholder="e.g. 500mg"
-            className="w-full text-sm border border-slate-200 rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
+            className="w-full text-sm border border-line rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
           />
         </div>
       </div>
@@ -114,7 +114,7 @@ function AddReminderForm({ patientId, onAdded }) {
               key={value}
               type="button"
               onClick={() => togglePreset(value)}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-colors ${ times.includes(value) ? "bg-ink text-paper border-ink" : "bg-white text-slate-500 border-slate-200 hover:border-line-strong hover:text-blue-600" }`}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-colors ${ times.includes(value) ? "bg-ink text-paper border-ink" : "bg-surface text-slate-500 border-line hover:border-line-strong hover:text-blue-600" }`}
             >
               {label} · {formatTime12(value)}
             </button>
@@ -125,12 +125,12 @@ function AddReminderForm({ patientId, onAdded }) {
             type="time"
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
-            className="text-sm border border-slate-200 rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
+            className="text-sm border border-line rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
           />
           <button
             type="button"
             onClick={addCustomTime}
-            className="text-xs px-3 py-1.5 border border-slate-200 rounded-[3px] text-slate-500 hover:bg-slate-50 transition-colors"
+            className="text-xs px-3 py-1.5 border border-line rounded-[3px] text-slate-500 hover:bg-slate-50 transition-colors"
           >
             Add custom time
           </button>
@@ -155,7 +155,7 @@ function AddReminderForm({ patientId, onAdded }) {
               key={val}
               type="button"
               onClick={() => setFreq(val)}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-colors ${ freq === val ? "bg-ink text-paper border-ink" : "bg-white text-slate-500 border-slate-200 hover:border-line-strong" }`}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-colors ${ freq === val ? "bg-ink text-paper border-ink" : "bg-surface text-slate-500 border-line hover:border-line-strong" }`}
             >
               {lbl}
             </button>
@@ -168,7 +168,7 @@ function AddReminderForm({ patientId, onAdded }) {
                 key={d}
                 type="button"
                 onClick={() => toggleDay(d)}
-                className={`text-xs font-semibold w-10 py-1 rounded-[3px] border transition-colors ${ days.includes(d) ? "bg-ink text-paper border-ink" : "bg-white text-slate-500 border-slate-200 hover:border-line-strong" }`}
+                className={`text-xs font-semibold w-10 py-1 rounded-[3px] border transition-colors ${ days.includes(d) ? "bg-ink text-paper border-ink" : "bg-surface text-slate-500 border-line hover:border-line-strong" }`}
               >
                 {d}
               </button>
@@ -184,7 +184,7 @@ function AddReminderForm({ patientId, onAdded }) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="e.g. Take with food"
-          className="w-full text-sm border border-slate-200 rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
+          className="w-full text-sm border border-line rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
         />
       </div>
 
@@ -264,7 +264,7 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
       <div className="flex items-center justify-between gap-3 pb-2 border-b border-ink">
         <p className="text-[13px] font-semibold">AI prescription parser</p>
         {plan?.source && (
-          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-sm border ${ plan.source === "ai" ? "bg-sunken text-ink border-line-strong" : "bg-slate-50 text-slate-500 border-slate-200" }`}>
+          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-sm border ${ plan.source === "ai" ? "bg-sunken text-ink border-line-strong" : "bg-slate-50 text-slate-500 border-line" }`}>
             {plan.source === "ai" ? "AI" : "Local"}
           </span>
         )}
@@ -275,7 +275,7 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
         onChange={(e) => setText(e.target.value)}
         rows={5}
         placeholder="Paste prescription text, e.g. Metformin 500mg twice daily; Atorvastatin 20mg at night"
-        className="w-full text-sm border border-slate-200 rounded-[3px] px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10 resize-none"
+        className="w-full text-sm border border-line rounded-[3px] px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10 resize-none"
       />
 
       <button
@@ -317,7 +317,7 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
             const key = `${reminder.medicationName}-${index}`;
             const saved = savedKeys.has(key);
             return (
-              <div key={key} className="rounded-[3px] border border-slate-100 bg-slate-50 p-3 space-y-2">
+              <div key={key} className="rounded-[3px] border border-line bg-slate-50 p-3 space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-800 truncate">{reminder.medicationName}</p>
@@ -330,7 +330,7 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
                     type="button"
                     onClick={() => saveReminder(reminder, key)}
                     disabled={saving || saved}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-colors ${ saved ? "bg-surface text-emerald-700 border-emerald-200" : "bg-white text-ink border-line-strong hover:bg-sunken" }`}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-colors ${ saved ? "bg-surface text-emerald-700 border-emerald-200" : "bg-surface text-ink border-line-strong hover:bg-sunken" }`}
                   >
                     {saved ? "Added" : "Add"}
                   </button>
@@ -357,7 +357,7 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
           })}
 
           {plan.counseling?.length > 0 && (
-            <div className="border-t border-slate-100 pt-3 space-y-1">
+            <div className="border-t border-line pt-3 space-y-1">
               {plan.counseling.map((item) => (
                 <p key={item} className="text-xs text-slate-400">{item}</p>
               ))}
@@ -491,7 +491,7 @@ function DrugInteractionChecker({ reminders }) {
       )}
 
       {result?.summary && (
-        <p className="text-xs text-slate-500 border-t border-slate-100 pt-3 leading-relaxed">{result.summary}</p>
+        <p className="text-xs text-slate-500 border-t border-line pt-3 leading-relaxed">{result.summary}</p>
       )}
     </div>
   );
