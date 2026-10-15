@@ -8,6 +8,8 @@ require("dotenv").config({ override: true });
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
 
 const dataRoutes = require("./routes/dataRoutes");
 const clusterRoutes = require("./routes/clusterRoutes");
@@ -28,7 +30,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
-app.use(cors({ origin: ["http://localhost:3000", "http://localhost:5173"] }));
+const CORS_ORIGINS = ["http://localhost:3000", "http://localhost:5173",
+  ...(process.env.CORS_ORIGINS || "").split(",").map((o) => o.trim()).filter(Boolean)];
+app.use(cors({ origin: CORS_ORIGINS }));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use((req, _res, next) => {
@@ -59,6 +63,14 @@ app.use("/api", (_req, res) => {
   res.status(404).json({ error: "API route not found" });
 });
 
+// ── Built frontend (production image) ───────────────────────────────────────
+// Serves the React app from ./public and falls back to index.html for client routes.
+const PUBLIC_DIR = path.join(__dirname, "public");
+if (fs.existsSync(path.join(PUBLIC_DIR, "index.html"))) {
+  app.use(express.static(PUBLIC_DIR, { index: false, maxAge: "1h" }));
+  app.get("*", (_req, res) => res.sendFile(path.join(PUBLIC_DIR, "index.html")));
+}
+
 app.use((err, _req, res, _next) => {
   let status = err.status || err.statusCode || 500;
   let message = status >= 500 ? "Internal server error" : err.message;
@@ -81,7 +93,7 @@ app.use((err, _req, res, _next) => {
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/medicluster";
 
 mongoose
-  .connect(MONGO_URI, { serverSelectionTimeoutMS: 2000 })
+  .connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 })
   .then(() => {
     console.log("✅  MongoDB connected");
     app.listen(PORT, () =>
