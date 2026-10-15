@@ -5,6 +5,7 @@ import App from "./App";
 import { AuthProvider } from "./auth/AuthContext";
 import SplashScreen from "./components/SplashScreen";
 import "./index.css";
+import "./installPrompt";
 
 // The intro plays once per browser session.
 const SPLASH_KEY = "medicluster.seenSplash";

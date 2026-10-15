@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import { getMlHealth } from "../api/apiClient";
 import { NAV_GROUPS, NAV_ITEMS, isActive } from "../navigation";
 import Logo from "./Logo";
+import { useInstallPrompt } from "../installPrompt";
 
 const ML_POLL_MS = 30_000;
 
@@ -89,6 +90,7 @@ export default function AppShell({ children }) {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const install = useInstallPrompt();
 
   useEffect(() => setMenuOpen(false), [pathname]);
   useEffect(() => {
@@ -146,6 +148,12 @@ export default function AppShell({ children }) {
           </button>
           <div className="flex-1 flex justify-end items-center gap-2.5 min-w-0">
             <Search />
+            {install && (
+              <button type="button" onClick={install}
+                className="h-[30px] px-2.5 flex items-center bg-ink text-paper rounded-[3px] font-mono text-[11px] tracking-[0.04em] uppercase whitespace-nowrap hover:bg-slate-700">
+                Install app
+              </button>
+            )}
             <Link to="/app"
               className="h-[30px] px-2.5 flex items-center border border-line-strong rounded-[3px] font-mono text-[11px] tracking-[0.04em] uppercase whitespace-nowrap hover:bg-sunken">
               Patient app

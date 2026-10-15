@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Logo from "../components/Logo";
+import { useInstallPrompt } from "../installPrompt";
 
 export function Field({ label, aside, id, ...input }) {
   return (
@@ -31,6 +32,7 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [busy, setBusy] = useState(false);
+  const install = useInstallPrompt();
 
   if (user) return <Navigate to={user.onboarded ? location.state?.from || "/" : "/onboarding"} replace />;
 
@@ -150,6 +152,11 @@ export default function LoginPage() {
               <>Already have an account? <a href="#" className={linkCls} onClick={switchMode("signin")}>Sign in</a></>
             )}
           </p>
+          {install && (
+            <button type="button" onClick={install} className="btn-secondary h-10 text-[13px]">
+              Install MediCluster app
+            </button>
+          )}
         </form>
       </main>
     </div>
