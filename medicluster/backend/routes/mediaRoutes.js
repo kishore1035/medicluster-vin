@@ -487,7 +487,9 @@ const LANGUAGE_NAMES = {
 router.post("/ai-chat", async (req, res, next) => {
   try {
     const { imageBase64, mediaType, chatHistory = [], question = "", language = "en", location } = req.body;
-    if (!imageBase64) return res.status(400).json({ error: "imageBase64 is required" });
+    if (!imageBase64 && !question.trim()) {
+      return res.status(400).json({ error: "imageBase64 or question is required" });
+    }
 
     const SUPPORTED = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
     const type = SUPPORTED.has(mediaType) ? mediaType : "image/jpeg";
@@ -504,6 +506,32 @@ When analyzing a medical image, structure your response with these exact section
 3. **How to prevent it**: [Provide prevention steps]
 4. **How to diagnose it**: [Explain diagnostic methods or tests needed]
 5. **Which hospital to go nearby**: [Suggest the type of medical specialist, department, or facility to consult]${langInstruction}`;
+
+    // Prior turns + the new question, so follow-ups answer what was actually asked.
+    const transcript = [
+      ...chatHistory.map((m) => `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content}`),
+      ...(question.trim() ? [`User: ${question.trim()}`] : []),
+    ].join("\n\n");
+
+    // Text-only symptom question (no photo attached).
+    if (!imageBase64) {
+      const textSystem = systemPrompt.replace("When analyzing a medical image", "When answering a patient's symptom question");
+      try {
+        const { reply } = await chatText(
+          `${transcript}\n\nAssistant:`,
+          { system: textSystem, maxTokens: 1500 }
+        );
+        const enrichedReply = await enrichReplyWithHospitals(reply, location);
+        return res.json({ reply: enrichedReply.trim() });
+      } catch (err) {
+        if (err instanceof OllamaUnavailableError) {
+          return res.status(502).json({
+            error: "Ollama chat unavailable — verify OLLAMA_URL is reachable and OLLAMA_API_KEY (if any) is valid.",
+          });
+        }
+        return next(err);
+      }
+    }
 
     // Optional NVIDIA NIM fallback for users who still have a key configured.
     const nvidiaKey = process.env.NVIDIA_API_KEY;
@@ -541,13 +569,12 @@ When analyzing a medical image, structure your response with these exact section
     }
 
     // Primary path: Ollama (local or cloud, OLLAMA_API_KEY auth if configured).
-    const firstUserText = chatHistory.length === 0
-      ? (question.trim() || "Please analyze this medical image. Tell me what condition is visible, how to prevent it, how to treat it, and what medications are commonly used.")
-      : chatHistory[0].content;
+    const userText = transcript ||
+      "Please analyze this medical image. Tell me what condition is visible, how to prevent it, how to treat it, and what medications are commonly used.";
 
     try {
       const { reply, model } = await chatVision({
-        prompt: `${systemPrompt}\n\nUser Question: ${firstUserText}`,
+        prompt: `${systemPrompt}\n\n${userText}`,
         system: systemPrompt,
         imageB64: imageBase64,
         mediaType: type,

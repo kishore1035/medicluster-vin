@@ -1,0 +1,252 @@
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
+import {
+  listReminders, markDoseTaken, getPatientProfile, updatePatientProfile, listReadings,
+} from "../api/apiClient";
+import { dateKey, slotsOn, toMinutes, nowMinutes } from "../data/schedule";
+import TodayScreen from "./screens/TodayScreen";
+import CliniqScreen from "./screens/CliniqScreen";
+import HealthScreen from "./screens/HealthScreen";
+import LogReadingScreen from "./screens/LogReadingScreen";
+import VisitsScreen from "./screens/VisitsScreen";
+import EmergencyScreen from "./screens/EmergencyScreen";
+import ProfileScreen from "./screens/ProfileScreen";
+import ReminderAlert from "./ReminderAlert";
+
+const PatientContext = createContext(null);
+export const usePatient = () => useContext(PatientContext);
+
+const PATIENT_KEY = "medicluster.patientId";
+const SNOOZE_KEY = "medicluster.snoozes";
+const SNOOZE_MS = 30 * 60 * 1000;
+// Don't raise an alert for doses more than this many minutes overdue.
+const ALERT_WINDOW_MIN = 120;
+
+function readStorage(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw == null ? fallback : JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* storage unavailable: state still lives in memory */
+  }
+}
+
+export const slotKey = (slot) => `${slot.date}|${slot.time}`;
+
+function useNow(intervalMs = 30_000) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
+
+function apiError(err) {
+  return err?.response?.data?.error || err?.message || "Something went wrong";
+}
+
+export default function PatientApp() {
+  const [patientId, setPatientIdState] = useState(() => readStorage(PATIENT_KEY, ""));
+  const [profile, setProfile] = useState(null);
+  const [reminders, setReminders] = useState([]);
+  const [readings, setReadings] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [snoozes, setSnoozes] = useState(() => readStorage(SNOOZE_KEY, {}));
+  const now = useNow();
+
+  const setPatientId = useCallback((id) => {
+    writeStorage(PATIENT_KEY, id);
+    setPatientIdState(id);
+  }, []);
+
+  const refreshReminders = useCallback(async () => {
+    if (!patientId) return;
+    setReminders(await listReminders(patientId));
+  }, [patientId]);
+
+  const refreshReadings = useCallback(async () => {
+    if (!patientId) return;
+    setReadings(await listReadings(patientId));
+  }, [patientId]);
+
+  useEffect(() => {
+    setProfile(null);
+    setReminders([]);
+    setReadings([]);
+    if (!patientId) return;
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    Promise.all([getPatientProfile(patientId), listReminders(patientId), listReadings(patientId)])
+      .then(([p, rems, reads]) => {
+        if (cancelled) return;
+        setProfile(p);
+        setReminders(rems);
+        setReadings(reads);
+      })
+      .catch((err) => !cancelled && setError(apiError(err)))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [patientId]);
+
+  const saveProfile = useCallback(async (patch) => {
+    const saved = await updatePatientProfile(patientId, patch);
+    setProfile(saved);
+    return saved;
+  }, [patientId]);
+
+  const takeSlot = useCallback(async (slot) => {
+    const pending = slot.reminders.filter(
+      (r) => !(r.doseLog ?? []).some((l) => l.date === slot.date && l.time === slot.time)
+    );
+    const updated = await Promise.all(pending.map((r) => markDoseTaken(r._id, slot.date, slot.time)));
+    const byId = new Map(updated.map((r) => [r._id, r]));
+    setReminders((prev) => prev.map((r) => byId.get(r._id) ?? r));
+  }, []);
+
+  const snoozeSlot = useCallback((slot) => {
+    setSnoozes((prev) => {
+      const today = dateKey(new Date());
+      // Drop snoozes from earlier days so storage doesn't grow forever.
+      const kept = Object.fromEntries(Object.entries(prev).filter(([k]) => k.startsWith(today)));
+      const next = { ...kept, [slotKey(slot)]: Date.now() + SNOOZE_MS };
+      writeStorage(SNOOZE_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const todaySlots = useMemo(() => slotsOn(reminders, now), [reminders, now]);
+
+  const value = {
+    patientId, setPatientId, profile, saveProfile,
+    reminders, refreshReminders, readings, refreshReadings,
+    todaySlots, now, snoozes, takeSlot, snoozeSlot,
+    loading, error, setError, apiError,
+  };
+
+  return (
+    <PatientContext.Provider value={value}>
+      <PhoneFrame>
+        {patientId ? <AppRoutes /> : <ProfileScreen setup />}
+        {patientId && <DoseAlerts />}
+      </PhoneFrame>
+    </PatientContext.Provider>
+  );
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route index element={<TodayScreen />} />
+      <Route path="cliniq" element={<CliniqScreen />} />
+      <Route path="health" element={<HealthScreen />} />
+      <Route path="health/log" element={<LogReadingScreen />} />
+      <Route path="visits" element={<VisitsScreen />} />
+      <Route path="emergency" element={<EmergencyScreen />} />
+      <Route path="profile" element={<ProfileScreen />} />
+      <Route path="*" element={<Navigate to="/app" replace />} />
+    </Routes>
+  );
+}
+
+/** Full-screen on phones; a 390×844 device frame on larger screens. */
+function PhoneFrame({ children }) {
+  return (
+    <div className="min-h-[100dvh] bg-[#e4e1da] flex items-center justify-center sm:py-8">
+      <div className="relative w-full h-[100dvh] sm:w-[390px] sm:h-[844px] sm:rounded-[44px] sm:border-[10px] sm:border-ink bg-paper text-ink overflow-hidden flex flex-col">
+        <StatusBar />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StatusBar() {
+  const { now } = usePatient();
+  const time = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M$/i, "");
+  return (
+    <div className="hidden sm:flex h-12 shrink-0 justify-between items-end px-7 pb-1.5 text-[15px] font-semibold">
+      <span>{time}</span>
+      <span className="font-mono text-xs">5G ▮▮▮</span>
+    </div>
+  );
+}
+
+const TABS = [
+  { to: "/app", label: "Today", end: true },
+  { to: "/app/cliniq", label: "Ask CliniQ" },
+  { to: "/app/health", label: "My health" },
+];
+
+export function TabBar() {
+  return (
+    <nav className="h-[84px] shrink-0 grid grid-cols-3 border-t border-line bg-surface pb-5">
+      {TABS.map(({ to, label, end }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={end}
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center gap-1 text-xs ${isActive ? "font-semibold text-ink" : "text-slate-500"}`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <span className={`w-[18px] h-[3px] ${isActive ? "bg-ink" : ""}`} />
+              {label}
+            </>
+          )}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
+/** Raises the reminder sheet (and a system notification when the tab is hidden) for due doses. */
+function DoseAlerts() {
+  const { todaySlots, now, snoozes, takeSlot, snoozeSlot } = usePatient();
+  const [dismissed, setDismissed] = useState(() => new Set());
+  const notified = useRef(new Set());
+  const { pathname } = useLocation();
+
+  const due = todaySlots.find((slot) => {
+    const overdueBy = nowMinutes(now) - toMinutes(slot.time);
+    return !slot.taken
+      && overdueBy >= 0 && overdueBy <= ALERT_WINDOW_MIN
+      && !(snoozes[slotKey(slot)] > now.getTime())
+      && !dismissed.has(slotKey(slot));
+  });
+
+  useEffect(() => {
+    if (!due || notified.current.has(slotKey(due))) return;
+    notified.current.add(slotKey(due));
+    if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+      const names = due.reminders.map((r) => `${r.medicationName}${r.dosage ? ` ${r.dosage}` : ""}`).join(" and ");
+      new Notification("Time for your medicines", { body: names, tag: slotKey(due) });
+    }
+  }, [due]);
+
+  // Never cover an emergency call in progress.
+  if (!due || pathname.startsWith("/app/emergency")) return null;
+
+  const dismiss = () => setDismissed((prev) => new Set(prev).add(slotKey(due)));
+  return (
+    <ReminderAlert
+      slot={due}
+      now={now}
+      onTaken={async () => { await takeSlot(due); dismiss(); }}
+      onSnooze={() => { snoozeSlot(due); dismiss(); }}
+      onClose={dismiss}
+    />
+  );
+}

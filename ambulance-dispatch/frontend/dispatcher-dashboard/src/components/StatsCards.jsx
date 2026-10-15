@@ -1,44 +1,26 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import { T, SERIF, monoLabelSx } from '../theme/tokens';
 
-const G = '#2563EB';
-const TEXT = '#0F172A';
-const DIM = '#64748B';
-const RED  = '#E25C50';
-const AMB  = '#E3A94F';
-const GLASS_BG = '#FFFFFF';
-const GLASS_BRD = '#E2E8F0';
+const RESPONSE_TARGET_MIN = 10;
 
-function StatCard({ label, value, sub, subColor }) {
+function Stat({ label, value, sub, subColor = T.tx3 }) {
   return (
-    <Box sx={{
-      flex: 1,
-      background: GLASS_BG,
-      backdropFilter: 'blur(10px)',
-      border: `1px solid ${GLASS_BRD}`,
-      borderRadius: '12px',
-      p: '10px 14px',
-    }}>
-      <Typography sx={{ fontSize: 10, color: DIM, letterSpacing: '0.06em', mb: '3px', fontWeight: 600 }}>
-        {label}
-      </Typography>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-        <Typography sx={{ fontSize: 20, fontWeight: 800, color: TEXT, lineHeight: 1 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+      <Typography sx={monoLabelSx}>{label}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+        <Typography sx={{ fontFamily: SERIF, fontSize: 38, lineHeight: 1, letterSpacing: '-0.02em', color: T.tx }}>
           {value}
         </Typography>
-        {sub && (
-          <Typography sx={{ fontSize: 11, fontWeight: 600, color: subColor || DIM, lineHeight: 1 }}>
-            {sub}
-          </Typography>
-        )}
+        {sub && <Typography sx={{ fontSize: 12, color: subColor }}>{sub}</Typography>}
       </Box>
     </Box>
   );
 }
 
-export default function StatsCards({ stats, incidents, ambulances, hospitals }) {
-  const activeCount    = incidents?.filter(i => !['RESOLVED','CANCELLED'].includes(i.status)).length ?? 0;
-  const criticalCount  = incidents?.filter(i => i.severity === 'CRITICAL' && !['RESOLVED','CANCELLED'].includes(i.status)).length ?? 0;
+export default function StatsCards({ stats, incidents, ambulances }) {
+  const open           = incidents?.filter(i => !['RESOLVED', 'CANCELLED'].includes(i.status)) ?? [];
+  const criticalCount  = open.filter(i => i.severity === 'CRITICAL').length;
   const availableCount = ambulances?.filter(a => a.status === 'AVAILABLE').length ?? 0;
   const totalAmbs      = ambulances?.length ?? 0;
   const avgResp        = stats?.avgResponseTime ?? '8.5';
@@ -46,29 +28,14 @@ export default function StatsCards({ stats, incidents, ambulances, hospitals }) 
   const improvement    = stats?.improvement ?? 23;
 
   return (
-    <Box sx={{ display: 'flex', gap: '10px', alignItems: 'stretch', width: '100%' }}>
-      <StatCard
-        label="ACTIVE"
-        value={activeCount}
-        sub={criticalCount > 0 ? `· ${criticalCount} critical` : undefined}
-        subColor={RED}
-      />
-      <StatCard
-        label="AVAILABLE"
-        value={availableCount}
-        sub={`of ${totalAmbs}`}
-        subColor={DIM}
-      />
-      <StatCard
-        label="AVG RESPONSE"
-        value={`${avgResp}m`}
-      />
-      <StatCard
-        label="RESOLVED TODAY"
-        value={resolved}
-        sub={`▲${improvement}%`}
-        subColor={G}
-      />
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '24px', width: '100%' }}>
+      <Stat label="Active incidents" value={open.length}
+        sub={criticalCount > 0 ? `${criticalCount} critical` : undefined} subColor={T.rT} />
+      <Stat label="Units available" value={availableCount} sub={`of ${totalAmbs}`} />
+      <Stat label="Avg response" value={`${avgResp}m`} sub={`target ${RESPONSE_TARGET_MIN}m`}
+        subColor={Number(avgResp) <= RESPONSE_TARGET_MIN ? T.gT : T.rT} />
+      <Stat label="Resolved today" value={resolved}
+        sub={`${improvement >= 0 ? '+' : ''}${improvement}% vs avg`} subColor={improvement >= 0 ? T.gT : T.rT} />
     </Box>
   );
 }

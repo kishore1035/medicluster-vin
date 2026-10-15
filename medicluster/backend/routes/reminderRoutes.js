@@ -23,7 +23,7 @@ router.get("/:patientId", async (req, res, next) => {
 
 // ── POST /api/reminders ───────────────────────────────────────────────────
 router.post("/", async (req, res, next) => {
-  const { patientId, medicationName, dosage, times, frequency, days, notes } = req.body;
+  const { patientId, medicationName, dosage, times, frequency, days, notes, pillsLeft } = req.body;
   if (!patientId || !patientId.trim()) {
     return res.status(400).json({ error: "patientId is required" });
   }
@@ -42,6 +42,7 @@ router.post("/", async (req, res, next) => {
       frequency: frequency ?? "daily",
       days: days ?? [],
       notes: notes?.trim() ?? "",
+      pillsLeft: Number.isFinite(pillsLeft) ? pillsLeft : null,
     });
     return res.status(201).json(reminder);
   } catch (err) {
@@ -55,13 +56,44 @@ router.patch("/:id", async (req, res, next) => {
     return res.status(400).json({ error: "Invalid reminder id" });
   }
   try {
-    const allowed = ["medicationName", "dosage", "times", "frequency", "days", "notes", "active"];
+    const allowed = ["medicationName", "dosage", "times", "frequency", "days", "notes", "active", "pillsLeft", "refillRequestedAt"];
     const update = Object.fromEntries(
       Object.entries(req.body).filter(([k]) => allowed.includes(k))
     );
     const updated = await Reminder.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
     if (!updated) return res.status(404).json({ error: "Reminder not found" });
     return res.json(updated);
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ── POST /api/reminders/:id/doses ─────────────────────────────────────────
+// Mark one dose slot as taken. Idempotent per (date, time); decrements pillsLeft once.
+router.post("/:id/doses", async (req, res, next) => {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return res.status(400).json({ error: "Invalid reminder id" });
+  }
+  const { date, time } = req.body;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? "") || !/^\d{2}:\d{2}$/.test(time ?? "")) {
+    return res.status(400).json({ error: "date (YYYY-MM-DD) and time (HH:MM) are required" });
+  }
+  try {
+    const updated = await Reminder.findOneAndUpdate(
+      { _id: req.params.id, doseLog: { $not: { $elemMatch: { date, time } } } },
+      { $push: { doseLog: { date, time, takenAt: new Date() } } },
+      { new: true }
+    );
+    if (!updated) {
+      const existing = await Reminder.findById(req.params.id).lean();
+      if (!existing) return res.status(404).json({ error: "Reminder not found" });
+      return res.json(existing); // already logged
+    }
+    if (typeof updated.pillsLeft === "number" && updated.pillsLeft > 0) {
+      updated.pillsLeft -= 1;
+      await updated.save();
+    }
+    return res.json(updated.toObject());
   } catch (err) {
     return next(err);
   }

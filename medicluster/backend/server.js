@@ -19,6 +19,10 @@ const aiRoutes        = require("./routes/aiRoutes");
 const mlRoutes        = require("./routes/mlRoutes");
 const healthRoutes    = require("./routes/healthRoutes");
 const settingsRoutes  = require("./routes/settingsRoutes");
+const patientAppRoutes = require("./routes/patientAppRoutes");
+const authRoutes      = require("./routes/authRoutes");
+const alertRoutes     = require("./routes/alertRoutes");
+const { requireAuth } = require("./middleware/auth");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,16 +36,20 @@ app.use((req, _res, next) => {
   next();
 });
 // ── Routes ────────────────────────────────────────────────────────────────────
-app.use("/api/data", dataRoutes);
-app.use("/api/cluster", clusterRoutes);
+app.use("/api/auth",    authRoutes);
+// Clinician-only data. Patient-app and dispatch endpoints stay unauthenticated.
+app.use("/api/data",    requireAuth, dataRoutes);
+app.use("/api/cluster", requireAuth, clusterRoutes);
+app.use("/api/alerts",  requireAuth, alertRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/reminders", reminderRoutes);
 app.use("/api/dispatch", dispatchRoutes);
 app.use("/api/triage",  triageRoutes);
 app.use("/api/ai",      aiRoutes);
-app.use("/api/ml",      mlRoutes);
+app.use("/api/ml",      requireAuth, mlRoutes);
 app.use("/api/health",  healthRoutes);
-app.use("/api/settings", settingsRoutes);
+app.use("/api/settings", requireAuth, settingsRoutes);
+app.use("/api/patient-app", patientAppRoutes);
 
 app.get("/api/health", (_req, res) =>
   res.json({ status: "ok", service: "medicluster-backend" })
@@ -73,7 +81,7 @@ app.use((err, _req, res, _next) => {
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/medicluster";
 
 mongoose
-  .connect(MONGO_URI)
+  .connect(MONGO_URI, { serverSelectionTimeoutMS: 2000 })
   .then(() => {
     console.log("✅  MongoDB connected");
     app.listen(PORT, () =>

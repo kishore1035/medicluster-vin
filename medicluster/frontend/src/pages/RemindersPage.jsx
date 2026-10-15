@@ -7,7 +7,11 @@ import {
   deleteReminder,
   generateMedicationPlan,
   checkDrugInteractions,
+  markDoseTaken,
 } from "../api/apiClient";
+import { Link } from "react-router-dom";
+import { Page, Section, linkCls } from "../components/ui";
+import { adherence, dateKey, formatRelative, formatTime12, isTaken, joinNames, nowMinutes, slotsOn, toMinutes } from "../data/schedule";
 
 const PRESET_TIMES = [
   { label: "Morning",   value: "08:00" },
@@ -17,138 +21,6 @@ const PRESET_TIMES = [
 ];
 
 const FREQ_LABELS = { daily: "Daily", weekly: "Weekly", "as-needed": "As needed" };
-
-function timeLabel(t) {
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h < 12 ? "AM" : "PM";
-  const hour = h % 12 || 12;
-  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
-}
-
-function isDueNow(times) {
-  const now = new Date();
-  const currentMins = now.getHours() * 60 + now.getMinutes();
-  return times.some((t) => {
-    const [h, m] = t.split(":").map(Number);
-    const diff = Math.abs(h * 60 + m - currentMins);
-    return diff <= 30;
-  });
-}
-
-function isUpcoming(times) {
-  const now = new Date();
-  const currentMins = now.getHours() * 60 + now.getMinutes();
-  return times.some((t) => {
-    const [h, m] = t.split(":").map(Number);
-    const diff = h * 60 + m - currentMins;
-    return diff > 0 && diff <= 120;
-  });
-}
-
-function ReminderCard({ reminder, onToggle, onDelete }) {
-  const due = isDueNow(reminder.times);
-  const upcoming = !due && isUpcoming(reminder.times);
-
-  return (
-    <div
-      className={`bg-white rounded-xl border p-4 transition-all ${
-        !reminder.active
-          ? "border-slate-100 opacity-60"
-          : due
-          ? "border-red-300 shadow-sm shadow-red-100"
-          : upcoming
-          ? "border-amber-300 shadow-sm shadow-amber-50"
-          : "border-slate-200"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-semibold text-slate-800 text-sm">{reminder.medicationName}</p>
-            {reminder.dosage && (
-              <span className="text-xs text-slate-400 font-mono bg-slate-50 px-1.5 py-0.5 rounded">
-                {reminder.dosage}
-              </span>
-            )}
-            {due && (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 animate-pulse">
-                Due Now
-              </span>
-            )}
-            {upcoming && (
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                Upcoming
-              </span>
-            )}
-            {!reminder.active && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">Paused</span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {reminder.times.map((t) => (
-              <span
-                key={t}
-                className={`text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 ${
-                  isDueNow([t])
-                    ? "bg-red-100 text-red-700"
-                    : isUpcoming([t])
-                    ? "bg-amber-100 text-amber-700"
-                    : "bg-blue-50 text-blue-700"
-                }`}
-              >
-                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {timeLabel(t)}
-              </span>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
-            <span>{FREQ_LABELS[reminder.frequency] ?? reminder.frequency}</span>
-            {reminder.days?.length > 0 && (
-              <span>{reminder.days.join(", ")}</span>
-            )}
-          </div>
-
-          {reminder.notes && (
-            <p className="text-xs text-slate-500 mt-1.5 italic">{reminder.notes}</p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => onToggle(reminder)}
-            title={reminder.active ? "Pause reminder" : "Resume reminder"}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-          >
-            {reminder.active ? (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              </svg>
-            )}
-          </button>
-          <button
-            onClick={() => onDelete(reminder._id)}
-            title="Delete reminder"
-            className="p-1.5 rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function AddReminderForm({ patientId, onAdded }) {
   const [med,      setMed]      = useState("");
@@ -204,11 +76,11 @@ function AddReminderForm({ patientId, onAdded }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-      <p className="text-sm font-semibold text-slate-700">Add Medication Reminder</p>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <p className="section-label mb-0">Add medication</p>
 
       {error && (
-        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+        <p className="text-xs text-red-600 bg-surface border border-red-200 rounded-[3px] px-3 py-2">{error}</p>
       )}
 
       <div className="grid grid-cols-2 gap-3">
@@ -219,7 +91,7 @@ function AddReminderForm({ patientId, onAdded }) {
             value={med}
             onChange={(e) => setMed(e.target.value)}
             placeholder="e.g. Metformin"
-            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full text-sm border border-slate-200 rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
           />
         </div>
         <div>
@@ -229,7 +101,7 @@ function AddReminderForm({ patientId, onAdded }) {
             value={dosage}
             onChange={(e) => setDosage(e.target.value)}
             placeholder="e.g. 500mg"
-            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full text-sm border border-slate-200 rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
           />
         </div>
       </div>
@@ -242,13 +114,9 @@ function AddReminderForm({ patientId, onAdded }) {
               key={value}
               type="button"
               onClick={() => togglePreset(value)}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
-                times.includes(value)
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-slate-500 border-slate-200 hover:border-blue-400 hover:text-blue-600"
-              }`}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-colors ${ times.includes(value) ? "bg-ink text-paper border-ink" : "bg-white text-slate-500 border-slate-200 hover:border-line-strong hover:text-blue-600" }`}
             >
-              {label} · {timeLabel(value)}
+              {label} · {formatTime12(value)}
             </button>
           ))}
         </div>
@@ -257,12 +125,12 @@ function AddReminderForm({ patientId, onAdded }) {
             type="time"
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
-            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="text-sm border border-slate-200 rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
           />
           <button
             type="button"
             onClick={addCustomTime}
-            className="text-xs px-3 py-1.5 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 transition-colors"
+            className="text-xs px-3 py-1.5 border border-slate-200 rounded-[3px] text-slate-500 hover:bg-slate-50 transition-colors"
           >
             Add custom time
           </button>
@@ -270,8 +138,8 @@ function AddReminderForm({ patientId, onAdded }) {
         {times.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {[...times].sort().map((t) => (
-              <span key={t} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                {timeLabel(t)}
+              <span key={t} className="text-xs bg-sunken text-blue-700 px-2 py-0.5 rounded-sm font-semibold flex items-center gap-1">
+                {formatTime12(t)}
                 <button type="button" onClick={() => setTimes((prev) => prev.filter((x) => x !== t))} className="hover:text-red-500">×</button>
               </span>
             ))}
@@ -287,11 +155,7 @@ function AddReminderForm({ patientId, onAdded }) {
               key={val}
               type="button"
               onClick={() => setFreq(val)}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
-                freq === val
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-slate-500 border-slate-200 hover:border-blue-400"
-              }`}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-colors ${ freq === val ? "bg-ink text-paper border-ink" : "bg-white text-slate-500 border-slate-200 hover:border-line-strong" }`}
             >
               {lbl}
             </button>
@@ -304,11 +168,7 @@ function AddReminderForm({ patientId, onAdded }) {
                 key={d}
                 type="button"
                 onClick={() => toggleDay(d)}
-                className={`text-xs font-semibold w-10 py-1 rounded-lg border transition-colors ${
-                  days.includes(d)
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-slate-500 border-slate-200 hover:border-blue-400"
-                }`}
+                className={`text-xs font-semibold w-10 py-1 rounded-[3px] border transition-colors ${ days.includes(d) ? "bg-ink text-paper border-ink" : "bg-white text-slate-500 border-slate-200 hover:border-line-strong" }`}
               >
                 {d}
               </button>
@@ -324,7 +184,7 @@ function AddReminderForm({ patientId, onAdded }) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="e.g. Take with food"
-          className="w-full text-sm border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full text-sm border border-slate-200 rounded-[3px] px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10"
         />
       </div>
 
@@ -400,21 +260,11 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
   )).length;
 
   return (
-    <div className="bg-white rounded-xl border border-violet-200 p-5 space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-          <p className="text-sm font-semibold text-slate-700">AI Prescription Parser</p>
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3 pb-2 border-b border-ink">
+        <p className="text-[13px] font-semibold">AI prescription parser</p>
         {plan?.source && (
-          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
-            plan.source === "ai"
-              ? "bg-violet-50 text-violet-700 border-violet-200"
-              : "bg-slate-50 text-slate-500 border-slate-200"
-          }`}>
+          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-sm border ${ plan.source === "ai" ? "bg-sunken text-ink border-line-strong" : "bg-slate-50 text-slate-500 border-slate-200" }`}>
             {plan.source === "ai" ? "AI" : "Local"}
           </span>
         )}
@@ -425,20 +275,20 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
         onChange={(e) => setText(e.target.value)}
         rows={5}
         placeholder="Paste prescription text, e.g. Metformin 500mg twice daily; Atorvastatin 20mg at night"
-        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+        className="w-full text-sm border border-slate-200 rounded-[3px] px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ink/10 resize-none"
       />
 
       <button
         type="button"
         onClick={handleGenerate}
         disabled={loading || !text.trim()}
-        className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-lg py-2 transition-colors disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-ink bg-sunken hover:bg-sunken border border-line-strong rounded-[3px] py-2 transition-colors disabled:opacity-50"
       >
         {loading ? <><div className="spinner w-3.5 h-3.5" />Extracting...</> : "Extract schedule"}
       </button>
 
       {plan?.warnings?.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-1">
+        <div className="bg-surface border border-amber-200 rounded-[3px] px-3 py-2 space-y-1">
           {plan.warnings.map((warning) => (
             <p key={warning} className="text-xs text-amber-700">{warning}</p>
           ))}
@@ -448,7 +298,7 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
       {plan?.reminders?.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
               Suggested reminders
             </p>
             {pendingCount > 1 && (
@@ -456,7 +306,7 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
                 type="button"
                 onClick={saveAll}
                 disabled={saving}
-                className="text-xs font-semibold text-violet-700 hover:text-violet-900 disabled:opacity-50"
+                className="text-xs font-semibold text-ink hover:text-ink disabled:opacity-50"
               >
                 Add all
               </button>
@@ -467,7 +317,7 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
             const key = `${reminder.medicationName}-${index}`;
             const saved = savedKeys.has(key);
             return (
-              <div key={key} className="rounded-lg border border-slate-100 bg-slate-50 p-3 space-y-2">
+              <div key={key} className="rounded-[3px] border border-slate-100 bg-slate-50 p-3 space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-800 truncate">{reminder.medicationName}</p>
@@ -480,11 +330,7 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
                     type="button"
                     onClick={() => saveReminder(reminder, key)}
                     disabled={saving || saved}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
-                      saved
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-white text-violet-700 border-violet-200 hover:bg-violet-50"
-                    }`}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-[3px] border transition-colors ${ saved ? "bg-surface text-emerald-700 border-emerald-200" : "bg-white text-ink border-line-strong hover:bg-sunken" }`}
                   >
                     {saved ? "Added" : "Add"}
                   </button>
@@ -492,12 +338,12 @@ function AIPrescriptionPlanner({ patientId, reminders, onAdded, onError }) {
 
                 <div className="flex flex-wrap gap-1.5">
                   {(reminder.times ?? []).map((time) => (
-                    <span key={time} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                      {timeLabel(time)}
+                    <span key={time} className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-sunken text-blue-700 border border-line-strong">
+                      {formatTime12(time)}
                     </span>
                   ))}
                   {reminder.days?.map((day) => (
-                    <span key={day} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                    <span key={day} className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-slate-100 text-slate-600">
                       {day}
                     </span>
                   ))}
@@ -551,21 +397,15 @@ function DrugInteractionChecker({ reminders }) {
   const minor    = interactions.filter((i) => i.severity === "minor" || (!i.severity && i.description));
 
   return (
-    <div className="bg-white rounded-xl border border-orange-200 p-5 space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-          </svg>
-          <p className="text-sm font-semibold text-slate-700">Drug Interaction Checker</p>
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3 pb-2 border-b border-ink">
+        <p className="text-[13px] font-semibold">Drug interactions</p>
         <span className="text-xs text-slate-400">{activeNames.length} active meds</span>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
         {activeNames.map((name) => (
-          <span key={name} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
+          <span key={name} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-sm font-medium">
             {name}
           </span>
         ))}
@@ -575,7 +415,7 @@ function DrugInteractionChecker({ reminders }) {
         type="button"
         onClick={handleCheck}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg py-2 transition-colors disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-orange-700 bg-surface hover:bg-surface border border-orange-200 rounded-[3px] py-2 transition-colors disabled:opacity-50"
       >
         {loading ? (
           <><div className="spinner w-3.5 h-3.5" />Checking…</>
@@ -591,11 +431,11 @@ function DrugInteractionChecker({ reminders }) {
       </button>
 
       {err && (
-        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>
+        <p className="text-xs text-red-600 bg-surface border border-red-200 rounded-[3px] px-3 py-2">{err}</p>
       )}
 
       {result && interactions.length === 0 && (
-        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
+        <div className="flex items-center gap-2 bg-surface border border-emerald-200 rounded-[3px] px-3 py-2.5">
           <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -605,13 +445,13 @@ function DrugInteractionChecker({ reminders }) {
 
       {major.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-bold text-red-700 uppercase tracking-wide flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+          <p className="text-xs font-semibold text-red-700 uppercase tracking-wide flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-red-700 inline-block" />
             Major — {major.length}
           </p>
           {major.map((item, i) => (
-            <div key={i} className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-1">
-              <p className="text-xs font-bold text-red-800">{item.drug1} + {item.drug2}</p>
+            <div key={i} className="bg-surface border border-red-200 rounded-[3px] p-3 space-y-1">
+              <p className="text-xs font-semibold text-red-800">{item.drug1} + {item.drug2}</p>
               {item.description && <p className="text-xs text-red-600 leading-relaxed">{item.description}</p>}
               {item.recommendation && <p className="text-xs text-red-700 italic">{item.recommendation}</p>}
             </div>
@@ -621,13 +461,13 @@ function DrugInteractionChecker({ reminders }) {
 
       {moderate.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-bold text-amber-700 uppercase tracking-wide flex items-center gap-1">
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
             Moderate — {moderate.length}
           </p>
           {moderate.map((item, i) => (
-            <div key={i} className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1">
-              <p className="text-xs font-bold text-amber-800">{item.drug1} + {item.drug2}</p>
+            <div key={i} className="bg-surface border border-amber-200 rounded-[3px] p-3 space-y-1">
+              <p className="text-xs font-semibold text-amber-800">{item.drug1} + {item.drug2}</p>
               {item.description && <p className="text-xs text-amber-700 leading-relaxed">{item.description}</p>}
               {item.recommendation && <p className="text-xs text-amber-600 italic">{item.recommendation}</p>}
             </div>
@@ -637,13 +477,13 @@ function DrugInteractionChecker({ reminders }) {
 
       {minor.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-bold text-blue-600 uppercase tracking-wide flex items-center gap-1">
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
             Minor — {minor.length}
           </p>
           {minor.map((item, i) => (
-            <div key={i} className="bg-blue-50 border border-blue-100 rounded-lg p-3 space-y-1">
-              <p className="text-xs font-bold text-blue-800">{item.drug1} + {item.drug2}</p>
+            <div key={i} className="bg-sunken border border-line-strong rounded-[3px] p-3 space-y-1">
+              <p className="text-xs font-semibold text-blue-800">{item.drug1} + {item.drug2}</p>
               {item.description && <p className="text-xs text-blue-600 leading-relaxed">{item.description}</p>}
             </div>
           ))}
@@ -653,78 +493,6 @@ function DrugInteractionChecker({ reminders }) {
       {result?.summary && (
         <p className="text-xs text-slate-500 border-t border-slate-100 pt-3 leading-relaxed">{result.summary}</p>
       )}
-    </div>
-  );
-}
-
-function TodaySchedule({ reminders }) {
-  const active = reminders.filter((r) => r.active);
-  if (active.length === 0) return null;
-
-  const slots = [];
-  for (const r of active) {
-    for (const t of r.times) {
-      slots.push({ time: t, reminder: r });
-    }
-  }
-  slots.sort((a, b) => a.time.localeCompare(b.time));
-
-  const now = new Date();
-  const nowMins = now.getHours() * 60 + now.getMinutes();
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <p className="text-sm font-semibold text-slate-700">Today's Schedule</p>
-        <span className="text-xs text-slate-400 ml-auto">
-          {now.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
-        </span>
-      </div>
-
-      <div className="space-y-2">
-        {slots.map(({ time, reminder }, i) => {
-          const [h, m] = time.split(":").map(Number);
-          const slotMins = h * 60 + m;
-          const diff = slotMins - nowMins;
-          const past = diff < -30;
-          const dueNow = Math.abs(diff) <= 30;
-          const upcoming = diff > 30 && diff <= 120;
-
-          return (
-            <div
-              key={i}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${
-                past ? "bg-slate-50 opacity-50" :
-                dueNow ? "bg-red-50 border border-red-200" :
-                upcoming ? "bg-amber-50 border border-amber-200" :
-                "bg-slate-50"
-              }`}
-            >
-              <div className={`w-2 h-2 rounded-full shrink-0 ${
-                past ? "bg-slate-300" : dueNow ? "bg-red-500 animate-pulse" : upcoming ? "bg-amber-500" : "bg-blue-400"
-              }`} />
-              <span className={`font-mono text-xs font-bold w-16 shrink-0 ${
-                past ? "text-slate-400" : dueNow ? "text-red-700" : upcoming ? "text-amber-700" : "text-slate-600"
-              }`}>
-                {timeLabel(time)}
-              </span>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium text-slate-700 truncate">{reminder.medicationName}</span>
-                {reminder.dosage && (
-                  <span className="text-xs text-slate-400 ml-1.5">{reminder.dosage}</span>
-                )}
-              </div>
-              {dueNow && <span className="text-xs font-bold text-red-600 shrink-0">Take now</span>}
-              {upcoming && <span className="text-xs text-amber-600 shrink-0">~{Math.round(diff)}m</span>}
-              {past && <span className="text-xs text-slate-400 shrink-0">Done</span>}
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -764,6 +532,17 @@ export default function RemindersPage() {
     navigate(`/reminders/${pid}`);
   }
 
+  async function handleMarkTaken(slot) {
+    try {
+      const updated = await Promise.all(
+        slot.reminders.filter((r) => !isTaken(r, slot.date, slot.time)).map((r) => markDoseTaken(r._id, slot.date, slot.time))
+      );
+      setReminders((prev) => prev.map((r) => updated.find((u) => u._id === r._id) ?? r));
+    } catch {
+      setError("Failed to record the dose");
+    }
+  }
+
   function handleAdded(reminder) {
     setReminders((prev) => [reminder, ...prev]);
   }
@@ -786,141 +565,200 @@ export default function RemindersPage() {
     }
   }
 
-  const activeReminders   = reminders.filter((r) => r.active);
-  const inactiveReminders = reminders.filter((r) => !r.active);
-  const dueCount = activeReminders.filter((r) => isDueNow(r.times)).length;
+  return (
+    <Page title="Medication reminders" sub="Set and manage medication schedules per patient.">
+      <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-4 border-b border-line text-[13px]">
+        <label className="flex items-center gap-2 text-slate-600">
+          Patient
+          <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Patient ID"
+            className="h-8 w-40 px-2 border-b border-line-strong bg-transparent font-medium text-ink focus:outline-none focus:border-ink" />
+        </label>
+        <button type="submit" className="btn-secondary h-8 text-[13px] px-3">Load</button>
+        {patientId && (
+          <span className="ml-auto flex gap-5">
+            <a href="#add-medication" className={linkCls}>Add medication</a>
+            <Link to={`/patient/${encodeURIComponent(patientId)}`} className={linkCls}>Open chart</Link>
+          </span>
+        )}
+      </form>
+
+      {error && (
+        <div role="alert" className="flex justify-between gap-4 px-4 py-3 border border-risk-critical text-red-700 text-[13px]">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} className="underline shrink-0">Dismiss</button>
+        </div>
+      )}
+
+      {!patientId ? (
+        <p className="text-[13px] text-slate-500">Enter a patient ID to manage their medication schedules.</p>
+      ) : loading ? (
+        <p className="text-[13px] text-slate-500" aria-busy="true">Loading reminders…</p>
+      ) : (
+        <>
+          <NextDose reminders={reminders} onTaken={handleMarkTaken} />
+          <TodayTimeline reminders={reminders} />
+          <div className="grid gap-10 lg:grid-cols-2 items-start">
+            <Schedules reminders={reminders} onToggle={handleToggle} onDelete={handleDelete} />
+            <WeekGrid reminders={reminders} />
+          </div>
+          <div id="add-medication" className="grid gap-10 lg:grid-cols-3 items-start pt-4">
+            <AddReminderForm patientId={patientId} onAdded={handleAdded} />
+            <AIPrescriptionPlanner patientId={patientId} reminders={reminders} onAdded={handleAdded} onError={setError} />
+            <DrugInteractionChecker reminders={reminders} />
+          </div>
+        </>
+      )}
+    </Page>
+  );
+}
+
+// ── Next dose ─────────────────────────────────────────────────────────────────
+function NextDose({ reminders, onTaken }) {
+  const now = new Date();
+  const mins = nowMinutes(now);
+  const today = slotsOn(reminders, now);
+  // First untaken slot that isn't more than 2 h overdue; otherwise tomorrow's first.
+  let slot = today.find((s) => !s.taken && toMinutes(s.time) >= mins - 120);
+  let tomorrow = false;
+  if (!slot) {
+    const t = new Date(now); t.setDate(t.getDate() + 1);
+    slot = slotsOn(reminders, t)[0];
+    tomorrow = !!slot;
+  }
+  if (!slot) return null;
+  const delta = toMinutes(slot.time) - mins + (tomorrow ? 1440 : 0);
+  const names = joinNames(slot.reminders.map((r) => r.medicationName));
+  const doses = [...new Set(slot.reminders.map((r) => r.dosage).filter(Boolean))];
 
   return (
-    <div className="min-h-[calc(100vh-56px)] bg-slate-50 p-6">
-      <div className="max-w-screen-xl mx-auto">
-
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              Medication Reminders
-              {dueCount > 0 && (
-                <span className="text-xs font-bold bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
-                  {dueCount} due
-                </span>
-              )}
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5">Set and manage medication schedules per patient.</p>
-          </div>
-
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Enter patient ID…"
-              className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-52"
-            />
-            <button type="submit" className="btn-primary text-sm py-1.5 px-4">
-              Load Patient
-            </button>
-          </form>
-        </div>
-
-        {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-700 ml-4">✕</button>
-          </div>
-        )}
-
-        {!patientId ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-            </div>
-            <p className="text-slate-500 font-medium">Enter a patient ID to manage their medication reminders.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            {/* Left column: add form */}
-            <div className="lg:col-span-1 space-y-5">
-              <AddReminderForm patientId={patientId} onAdded={handleAdded} />
-              <AIPrescriptionPlanner
-                patientId={patientId}
-                reminders={reminders}
-                onAdded={handleAdded}
-                onError={setError}
-              />
-              <DrugInteractionChecker reminders={reminders} />
-            </div>
-
-            {/* Right column: today's schedule + reminder list */}
-            <div className="lg:col-span-2 space-y-5">
-
-              {/* Patient header strip */}
-              <div className="bg-white rounded-xl border border-slate-200 px-5 py-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                  <svg className="w-4.5 h-4.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-mono font-bold text-slate-900">{patientId}</p>
-                  <p className="text-xs text-slate-400">
-                    {activeReminders.length} active reminder{activeReminders.length !== 1 ? "s" : ""}
-                    {inactiveReminders.length > 0 && ` · ${inactiveReminders.length} paused`}
-                  </p>
-                </div>
-              </div>
-
-              {loading ? (
-                <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
-                  Loading reminders…
-                </div>
-              ) : (
-                <>
-                  <TodaySchedule reminders={reminders} />
-
-                  {reminders.length === 0 ? (
-                    <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-                      <p className="text-slate-400 text-sm">No reminders yet. Add one using the form.</p>
-                    </div>
-                  ) : (
-                    <>
-                      {activeReminders.length > 0 && (
-                        <div className="space-y-3">
-                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                            Active — {activeReminders.length}
-                          </p>
-                          {activeReminders.map((r) => (
-                            <ReminderCard key={r._id} reminder={r} onToggle={handleToggle} onDelete={handleDelete} />
-                          ))}
-                        </div>
-                      )}
-
-                      {inactiveReminders.length > 0 && (
-                        <div className="space-y-3">
-                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                            Paused — {inactiveReminders.length}
-                          </p>
-                          {inactiveReminders.map((r) => (
-                            <ReminderCard key={r._id} reminder={r} onToggle={handleToggle} onDelete={handleDelete} />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        )}
+    <section className="flex flex-wrap justify-between items-end gap-6">
+      <div className="flex flex-col gap-2 min-w-0">
+        <span className="eyebrow">Next dose · {tomorrow ? "tomorrow" : formatRelative(delta)}</span>
+        <h2 className="font-serif text-[clamp(30px,5vw,44px)] leading-[1.05] tracking-[-0.02em]">{names} at {slot.time}</h2>
+        {doses.length > 0 && <p className="text-[13px] text-slate-600">{doses.join(" · ")}</p>}
       </div>
-    </div>
+      {!tomorrow && (
+        <button type="button" onClick={() => onTaken(slot)} className="btn-primary h-10 px-5">Mark taken</button>
+      )}
+    </section>
+  );
+}
+
+// ── Today timeline ────────────────────────────────────────────────────────────
+function TodayTimeline({ reminders }) {
+  const now = new Date();
+  const slots = slotsOn(reminders, now);
+  const doses = slots.reduce((n, s) => n + s.reminders.length, 0);
+  const taken = slots.reduce((n, s) => n + s.reminders.filter((r) => isTaken(r, s.date, s.time)).length, 0);
+  const pos = (m) => `${(m / 1440) * 100}%`;
+  const mins = nowMinutes(now);
+  const title = `Today · ${now.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}`;
+
+  return (
+    <Section title={title} aside={<span className="eyebrow">{taken} of {doses} doses taken</span>}>
+      <div className="relative h-28 mx-2 mt-2" role="img"
+        aria-label={slots.map((s) => `${s.time} ${s.reminders.length} dose(s) ${s.taken ? "taken" : "due"}`).join(", ") || "No doses today"}>
+        <div className="absolute inset-x-0 top-12 h-px bg-line-strong" />
+        {[0, 6, 12, 18, 24].map((h) => (
+          <span key={h} className="absolute top-[86px] -translate-x-1/2 font-mono text-[11px] text-slate-500" style={{ left: pos(h * 60) }}>
+            {String(h).padStart(2, "0")}:00
+          </span>
+        ))}
+        <div className="absolute top-3 bottom-10 w-px bg-risk-high" style={{ left: pos(mins) }}>
+          <span className="absolute -top-3 left-1 font-mono text-[11px] text-orange-700 whitespace-nowrap">NOW</span>
+        </div>
+        {slots.map((s) => {
+          const m = toMinutes(s.time);
+          const missed = !s.taken && m < mins;
+          return (
+            <div key={s.time} className="absolute -translate-x-1/2 flex flex-col items-center gap-1" style={{ left: pos(m), top: 18 }}>
+              <span className="font-mono text-[11px]">{s.time}</span>
+              <span className={`w-6 h-6 grid place-items-center font-mono text-[11px] border ${ s.taken ? "bg-risk-low border-risk-low text-paper" : missed ? "border-risk-critical text-red-700 bg-surface" : "border-ink bg-surface" }`}>{s.reminders.length}</span>
+            </div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
+// ── Schedules ─────────────────────────────────────────────────────────────────
+function Schedules({ reminders, onToggle, onDelete }) {
+  const rows = [...reminders].sort((a, b) => Number(b.active) - Number(a.active));
+  return (
+    <Section title="Schedules" aside={<span className="eyebrow">Times</span>}>
+      {rows.length === 0 && <p className="py-3 text-[13px] text-slate-500">No schedules yet. Add one below.</p>}
+      {rows.map((r) => (
+        <div key={r._id} className={`flex flex-col gap-2 py-3 border-b border-line ${r.active ? "" : "text-slate-500"}`}>
+          <div className="flex justify-between items-start gap-3">
+            <span className="text-[13.5px] font-medium">{r.medicationName} <span className="font-mono text-xs font-normal text-slate-500">{r.dosage}</span></span>
+            <span className="flex gap-1 flex-wrap justify-end">
+              {(r.times ?? []).map((t) => <span key={t} className="font-mono text-xs px-1.5 py-0.5 border border-line-strong">{t}</span>)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center gap-3 text-xs">
+            <span className="text-slate-500 truncate">
+              {[FREQ_LABELS[r.frequency] ?? r.frequency, r.frequency === "weekly" && r.days?.join(", "), r.notes].filter(Boolean).join(" · ")}
+            </span>
+            <span className="flex items-center gap-3 shrink-0">
+              <button type="button" onClick={() => onToggle(r)} className="text-blue-600 underline underline-offset-2 hover:text-ink">
+                {r.active ? "Pause" : "Resume"}
+              </button>
+              <button type="button" onClick={() => onDelete(r._id)} className="text-red-700 underline underline-offset-2">Delete</button>
+              <span className={`font-mono tracking-[0.04em] ${r.active ? "text-green-700" : "text-slate-500"}`}>{r.active ? "ACTIVE" : "PAUSED"}</span>
+            </span>
+          </div>
+        </div>
+      ))}
+    </Section>
+  );
+}
+
+// ── This week ─────────────────────────────────────────────────────────────────
+function WeekGrid({ reminders }) {
+  const now = new Date();
+  const days = [...Array(7)].map((_, i) => { const d = new Date(now); d.setDate(d.getDate() - 6 + i); return d; });
+  const week = adherence(reminders, now, 7);
+  const cell = (r, d, i) => {
+    const date = dateKey(d);
+    const due = slotsOn([r], d).filter((s) => i < 6 || toMinutes(s.time) <= nowMinutes(now));
+    if (!r.active) return "bg-sunken";
+    if (!slotsOn([r], d).length) return "border border-dashed border-line-strong";
+    if (!due.length) return "border border-dashed border-line-strong";
+    const taken = due.filter((s) => isTaken(r, date, s.time)).length;
+    if (taken === due.length) return "bg-risk-low";
+    if (taken === 0) return "bg-red-50 border border-risk-critical";
+    return "bg-[linear-gradient(90deg,#5b8f72_50%,#e9e6df_50%)]";
+  };
+  const legend = [["bg-risk-low", "Taken"], ["bg-[linear-gradient(90deg,#5b8f72_50%,#e9e6df_50%)]", "Partly taken"], ["bg-red-50 border border-risk-critical", "Missed"], ["bg-sunken", "Paused"]];
+
+  return (
+    <Section title="This week" aside={<span className="eyebrow">{week.pct == null ? "—" : `${week.pct}% · ${week.missed} missed`}</span>}>
+      <div className="overflow-x-auto pt-3">
+        <table className="w-full text-[13px] border-separate border-spacing-1">
+          <thead>
+            <tr>
+              <th />
+              {days.map((d, i) => (
+                <th key={i} className={`font-mono text-[11px] font-normal ${i === 6 ? "text-ink font-semibold" : "text-slate-500"}`}>
+                  {d.toLocaleDateString([], { weekday: "narrow" })}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {reminders.map((r) => (
+              <tr key={r._id}>
+                <td className="pr-2 truncate max-w-[120px]">{r.medicationName}</td>
+                {days.map((d, i) => <td key={i}><div className={`h-4 min-w-[24px] ${cell(r, d, i)}`} /></td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-wrap gap-4 pt-3 text-xs text-slate-600">
+        {legend.map(([c, l]) => <span key={l} className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 ${c}`} />{l}</span>)}
+      </div>
+    </Section>
   );
 }

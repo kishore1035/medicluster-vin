@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import UploadPanel        from "../components/UploadPanel";
 import AlgorithmSelector  from "../components/AlgorithmSelector";
 import ClusterScatterPlot from "../components/ClusterScatterPlot";
-import RiskDonutChart     from "../components/RiskDonutChart";
+import RiskBars           from "../components/RiskBars";
+import { Page, Section, Tabs, Tag } from "../components/ui";
 import MetricsPanel       from "../components/MetricsPanel";
 import PatientTable       from "../components/PatientTable";
 import ComparisonPanel    from "../components/ComparisonPanel";
@@ -12,7 +14,7 @@ import AIClusterInsights  from "../components/AIClusterInsights";
 import { runClustering, detectAnomalies, explainClusters } from "../api/apiClient";
 import { exportToPdf }    from "../utils/exportPdf";
 
-const TABS = ["Scatter Plot", "Comparison", "Dendrogram", "Anomalies"];
+const TABS = ["Scatter", "Comparison", "Dendrogram", "Anomalies"].map((label, i) => ({ value: i, label }));
 
 const TIER_CLASS = {
   Low:      "badge-low",
@@ -29,10 +31,10 @@ function PatientDetailModal({ patient, clusterProfiles, featureNames, onClose })
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-[3px] w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between p-4 border-b border-slate-100">
           <div>
-            <p className="font-mono text-blue-700 font-bold text-sm">{patient.patient_id ?? "—"}</p>
+            <p className="font-mono text-blue-700 font-semibold text-sm">{patient.patient_id ?? "—"}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className={TIER_CLASS[patient.risk_tier] ?? "badge-noise"}>{patient.risk_tier}</span>
               <span className="text-xs text-slate-400">Cluster {patient.cluster_id}</span>
@@ -101,7 +103,7 @@ function AnomalyWatchlist({ patients, anomalies, featureNames, onPatientClick })
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-bold text-red-600 uppercase tracking-wide">
+        <span className="text-xs font-semibold text-red-600 uppercase tracking-wide">
           {flagged.length} Anomalous Patient{flagged.length !== 1 ? "s" : ""} Detected
         </span>
         <span className="text-xs text-slate-400">— statistical outliers from Isolation Forest</span>
@@ -114,16 +116,16 @@ function AnomalyWatchlist({ patients, anomalies, featureNames, onPatientClick })
             <div
               key={p.patient_id ?? i}
               onClick={() => onPatientClick(p)}
-              className="panel border-red-200 bg-red-50/30 cursor-pointer hover:border-red-400 transition-colors"
+              className="panel border-red-200 bg-surface/30 cursor-pointer hover:border-red-400 transition-colors"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
-                  <span className="font-mono text-sm font-bold text-slate-700">{p.patient_id ?? `Row ${origIdx}`}</span>
+                  <span className="w-2 h-2 rounded-full bg-red-700 shrink-0" />
+                  <span className="font-mono text-sm font-semibold text-slate-700">{p.patient_id ?? `Row ${origIdx}`}</span>
                   <span className={TIER_CLASS[p.risk_tier] ?? "badge-noise"}>{p.risk_tier}</span>
                 </div>
                 {score !== null && (
-                  <span className="text-xs font-mono text-red-500 bg-red-100 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-mono text-red-500 bg-surface px-2 py-0.5 rounded-sm">
                     score: {score.toFixed(3)}
                   </span>
                 )}
@@ -146,7 +148,7 @@ function AnomalyWatchlist({ patients, anomalies, featureNames, onPatientClick })
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
-      <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+      <div className="w-16 h-16 rounded-[3px] bg-slate-100 flex items-center justify-center">
         <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
             d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -161,7 +163,9 @@ function EmptyState() {
 }
 
 export default function DashboardPage() {
-  const [dataset,         setDataset]         = useState(null);
+  // Onboarding hands over the dataset it just uploaded.
+  const { state: navState } = useLocation();
+  const [dataset,         setDataset]         = useState(navState?.dataset ?? null);
   const [result,          setResult]          = useState(null);
   const [allResults,      setAllResults]      = useState(null);
   const [error,           setError]           = useState(null);
@@ -250,88 +254,47 @@ export default function DashboardPage() {
       .slice(0, 8);
   }, [clusterProfiles, featureNames]);
 
+  const exportPdf = () => exportToPdf(
+    "dashboard-results",
+    `Clustering Report — ${result?.algorithm?.toUpperCase() ?? ""}`,
+    "medicluster-clustering"
+  );
+
   return (
-    <div className="h-[calc(100vh-56px)] flex flex-col overflow-hidden bg-slate-50">
-
-      {/* ── Error / Warning banners ───────────────────────────────────── */}
+    <Page
+      title="Dashboard"
+      sub="Configure a dataset and algorithm, run clustering, and inspect the resulting risk tiers."
+      actions={hasResults && <button type="button" onClick={exportPdf} className="btn-secondary text-sm h-9">Export PDF</button>}
+    >
       {error && (
-        <div className="bg-red-50 border-b border-red-200 text-red-700 text-xs px-6 py-2.5 flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            {error}
-          </span>
-          <button onClick={() => setError(null)} className="hover:text-red-900 p-0.5">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        <div role="alert" className="flex justify-between gap-4 px-4 py-3 border border-risk-critical text-red-700 text-[13px]">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} className="underline shrink-0">Dismiss</button>
         </div>
       )}
-
       {warnings.length > 0 && (
-        <div className="bg-amber-50 border-b border-amber-200 text-amber-700 text-xs px-6 py-2.5 flex items-start justify-between gap-4">
-          <div className="space-y-0.5">
-            {warnings.map((w) => <p key={w}>{w}</p>)}
-          </div>
-          <button onClick={() => setWarnings([])} className="hover:text-amber-900 shrink-0 text-xs underline">
-            Dismiss
-          </button>
+        <div role="status" className="flex justify-between gap-4 px-4 py-3 border border-risk-moderate text-amber-800 text-[13px]">
+          <div className="space-y-0.5">{warnings.map((w) => <p key={w}>{w}</p>)}</div>
+          <button type="button" onClick={() => setWarnings([])} className="underline shrink-0">Dismiss</button>
         </div>
       )}
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="grid gap-10 items-start xl:grid-cols-[260px_minmax(0,1fr)_260px]">
 
-        {/* ── Left sidebar ─────────────────────────────────────────────── */}
-        <aside className="w-64 min-w-[15rem] flex flex-col gap-3 p-3 border-r border-slate-200 overflow-y-auto bg-white">
-          <UploadPanel onDatasetLoaded={handleDatasetLoaded} />
+        {/* ── Dataset + algorithm ── */}
+        <div className="flex flex-col gap-8 min-w-0">
+          <UploadPanel onDatasetLoaded={handleDatasetLoaded} initialDataset={dataset} />
           <AlgorithmSelector onRun={handleRun} disabled={!dataset} dataset={dataset} />
-        </aside>
+        </div>
 
-        {/* ── Main area ────────────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* ── Results ── */}
+        <div className="flex flex-col gap-6 min-w-0">
+          <Tabs label="Result views" options={TABS} value={activeTab} onChange={setActiveTab} />
 
-          {/* Tab bar */}
-          <div className="flex gap-0.5 px-4 pt-3 pb-0 border-b border-slate-200 bg-white items-center">
-            {TABS.map((tab, i) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(i)}
-                className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors border-b-2 -mb-px ${
-                  activeTab === i
-                    ? "text-blue-700 border-blue-600 bg-blue-50"
-                    : "text-slate-400 border-transparent hover:text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-            {hasResults && (
-              <button
-                onClick={() => exportToPdf(
-                  "dashboard-results",
-                  `Clustering Report — ${result?.algorithm?.toUpperCase() ?? ""}`,
-                  "medicluster-clustering"
-                )}
-                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors mb-0.5"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export PDF
-              </button>
-            )}
-          </div>
-
-          <div id="dashboard-results" className="flex-1 p-3 overflow-y-auto space-y-3">
+          <div id="dashboard-results" className="flex flex-col gap-8 min-w-0">
             {!hasResults ? (
-              <div className="h-72">
-                <div className="panel h-full">
-                  <EmptyState />
-                </div>
+              <div className="h-72 border border-dashed border-line-strong">
+                <EmptyState />
               </div>
             ) : (
               <>
@@ -376,6 +339,10 @@ export default function DashboardPage() {
               </>
             )}
 
+            {activeTab === 0 && clusterProfiles.length > 0 && (
+              <ClusterTable profiles={clusterProfiles} />
+            )}
+
             {activePatients.length > 0 && <PatientTable patients={activePatients} />}
 
             {result && activePatients.length > 0 && (
@@ -384,35 +351,20 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Right panel ──────────────────────────────────────────────── */}
-        <aside className="w-60 min-w-[14rem] flex flex-col gap-3 p-3 border-l border-slate-200 overflow-y-auto bg-white">
+        {/* ── Tiers, quality, drivers ── */}
+        <div className="flex flex-col gap-8 min-w-0">
           <ChartErrorBoundary
             title="Risk distribution"
             resetKey={`${runKey}-${JSON.stringify(activeRiskDist)}`}
           >
-            <RiskDonutChart riskDistribution={activeRiskDist} />
+            <RiskBars riskDistribution={activeRiskDist} />
           </ChartErrorBoundary>
 
           <MetricsPanel metrics={activeMetrics} />
 
-          {clusterProfiles.length > 0 && (
-            <div className="panel space-y-2 fade-in">
-              <p className="section-label">Cluster Profiles</p>
-              {clusterProfiles.map((cp) => (
-                <div key={cp.cluster_id} className="flex items-center justify-between text-xs py-1.5 border-b border-slate-100 last:border-0">
-                  <div className="space-y-0.5">
-                    <p className="text-slate-500 font-mono">Cluster {cp.cluster_id}</p>
-                    <span className={TIER_CLASS[cp.risk_tier] ?? "badge-noise"}>{cp.risk_tier}</span>
-                  </div>
-                  <span className="font-mono text-slate-400">{cp.size} pts</span>
-                </div>
-              ))}
-            </div>
-          )}
-
           {featureImportance.length > 0 && (
             <div className="panel space-y-2 fade-in">
-              <p className="section-label">Feature Importance</p>
+              <p className="section-label">Feature drivers</p>
               <p className="text-xs text-slate-400 -mt-1">What drives cluster separation</p>
               {featureImportance.map(({ feature, importance }) => (
                 <div key={feature} className="space-y-0.5">
@@ -420,8 +372,8 @@ export default function DashboardPage() {
                     <span className="text-slate-600 font-mono truncate max-w-[110px]">{feature}</span>
                     <span className="text-slate-400">{Math.round(importance * 100)}%</span>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-1.5">
-                    <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${importance * 100}%` }} />
+                  <div className="w-full bg-sunken h-1.5">
+                    <div className="h-1.5 bg-ink" style={{ width: `${importance * 100}%` }} />
                   </div>
                 </div>
               ))}
@@ -437,7 +389,7 @@ export default function DashboardPage() {
                   <button
                     onClick={loadShap}
                     disabled={shapLoading}
-                    className="text-xs text-violet-600 hover:text-violet-800 font-semibold disabled:opacity-50 flex items-center gap-1"
+                    className="text-xs text-blue-600 underline underline-offset-2 hover:text-ink disabled:opacity-50 flex items-center gap-1"
                   >
                     {shapLoading ? <><div className="spinner w-3 h-3" />Loading…</> : "Load"}
                   </button>
@@ -461,10 +413,10 @@ export default function DashboardPage() {
                         <div key={feat} className="space-y-0.5">
                           <div className="flex justify-between text-xs">
                             <span className="text-slate-600 font-mono truncate max-w-[110px]">{feat}</span>
-                            <span className="text-violet-500 font-mono">{val.toFixed(3)}</span>
+                            <span className="text-slate-600 font-mono">{val.toFixed(3)}</span>
                           </div>
-                          <div className="w-full bg-slate-100 rounded-full h-1.5">
-                            <div className="h-1.5 rounded-full bg-violet-500" style={{ width: `${pct}%` }} />
+                          <div className="w-full bg-sunken h-1.5">
+                            <div className="h-1.5 bg-ink" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
                       );
@@ -475,20 +427,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {!hasResults && (
-            <div className="panel">
-              <p className="section-label">Risk Distribution</p>
-              <div className="space-y-2 mt-2">
-                {["Low","Moderate","High","Critical"].map((t) => (
-                  <div key={t} className="flex items-center justify-between text-xs">
-                    <span className={TIER_CLASS[t]}>{t}</span>
-                    <span className="text-slate-300 font-mono">—</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </aside>
+        </div>
       </div>
 
       {selectedPatient && (
@@ -499,6 +438,44 @@ export default function DashboardPage() {
           onClose={() => setSelectedPatient(null)}
         />
       )}
+    </Page>
+  );
+}
+
+const CLUSTER_COLS = [
+  { key: "age", label: "Age" },
+  { key: "systolic_bp", label: "SBP" },
+  { key: "glucose", label: "Glucose" },
+];
+
+// Per-cluster size and centroid vitals, ordered by cluster id.
+function ClusterTable({ profiles }) {
+  const rows = [...profiles].sort((a, b) => a.cluster_id - b.cluster_id);
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="eyebrow text-left border-b border-ink">
+            <th className="py-2 font-normal">Cl.</th>
+            <th className="py-2 font-normal text-right">N</th>
+            {CLUSTER_COLS.map((c) => <th key={c.key} className="py-2 font-normal text-right">{c.label}</th>)}
+            <th className="py-2 font-normal text-right">Tier</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((cp) => (
+            <tr key={cp.cluster_id} className="border-b border-line">
+              <td className="py-3 font-mono">C{cp.cluster_id}</td>
+              <td className="py-3 font-mono text-right">{cp.size}</td>
+              {CLUSTER_COLS.map((c) => {
+                const v = cp.centroid_features?.[c.key];
+                return <td key={c.key} className="py-3 font-mono text-right">{v == null ? "—" : Math.round(v)}</td>;
+              })}
+              <td className="py-3 text-right"><Tag tone={cp.risk_tier} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

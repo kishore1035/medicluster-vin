@@ -29,7 +29,7 @@ function FindingsPanel({ findings, model }) {
   const TOP = 8;
   const top = findings.slice(0, TOP);
   return (
-    <div className="mt-2 bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-2">
+    <div className="mt-2 bg-slate-50 border border-slate-100 rounded-[3px] p-3 space-y-2">
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
         AI Findings · <span className="font-mono normal-case">{model}</span>
       </p>
@@ -43,7 +43,7 @@ function FindingsPanel({ findings, model }) {
           </div>
           <div className="w-full bg-slate-200 rounded-full h-1.5">
             <div
-              className={`h-1.5 rounded-full ${f.confidence > 0.5 ? "bg-red-500" : "bg-blue-400"}`}
+              className={`h-1.5 rounded-full ${f.confidence > 0.5 ? "bg-red-700" : "bg-blue-400"}`}
               style={{ width: `${(f.confidence * 100).toFixed(1)}%` }}
             />
           </div>
@@ -133,12 +133,12 @@ export default function PatientMediaModal({ patientId, onClose }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-[3px] w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-widest font-semibold">Patient Files</p>
-            <h2 className="text-base font-bold text-blue-950 font-mono">{patientId}</h2>
+            <h2 className="text-base font-semibold text-blue-950 font-mono">{patientId}</h2>
           </div>
           <button
             onClick={onClose}
@@ -158,8 +158,7 @@ export default function PatientMediaModal({ patientId, onClose }) {
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
             onClick={() => inputRef.current?.click()}
-            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
-              ${dragOver ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"}`}
+            className={`border-2 border-dashed rounded-[3px] p-6 text-center cursor-pointer transition-colors ${dragOver ? "border-ink bg-sunken" : "border-slate-200 hover:border-line-strong hover:bg-slate-50"}`}
           >
             <input
               ref={inputRef}
@@ -189,7 +188,7 @@ export default function PatientMediaModal({ patientId, onClose }) {
           </div>
 
           {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded px-3 py-2">{error}</p>
+            <p className="text-xs text-red-600 bg-surface border border-red-100 rounded px-3 py-2">{error}</p>
           )}
 
           {/* File grid */}
@@ -207,8 +206,7 @@ export default function PatientMediaModal({ patientId, onClose }) {
                 return (
                   <div
                     key={f._id}
-                    className={`group relative border rounded-lg overflow-hidden bg-slate-50 transition-colors
-                      ${isSelected ? "border-blue-500 ring-1 ring-blue-300" : "border-slate-100 hover:border-blue-300"}`}
+                    className={`group relative border rounded-[3px] overflow-hidden bg-slate-50 transition-colors ${isSelected ? "border-ink ring-1 ring-ink/10" : "border-slate-100 hover:border-line-strong"}`}
                   >
                     {f.file_type === "image" ? (
                       <button
@@ -238,7 +236,7 @@ export default function PatientMediaModal({ patientId, onClose }) {
                     {/* Overlay */}
                     <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="text-white text-xs truncate flex-1">{f.original_name}</span>
+                        <span className="text-paper text-xs truncate flex-1">{f.original_name}</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(f.gridfs_id); }}
                           className="text-red-400 hover:text-red-300 transition-colors shrink-0"
@@ -254,18 +252,18 @@ export default function PatientMediaModal({ patientId, onClose }) {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleAnalyze(f); }}
                           disabled={isAnalyzing}
-                          className="w-full text-xs bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded px-2 py-0.5 transition-colors flex items-center justify-center gap-1"
+                          className="w-full text-xs bg-ink hover:bg-slate-700 disabled:bg-blue-800 text-paper rounded px-2 py-0.5 transition-colors flex items-center justify-center gap-1"
                         >
                           {isAnalyzing ? (
                             <><div className="spinner w-3 h-3" /> Analyzing…</>
-                          ) : f.analysis ? "Re-analyze" : "🔬 Analyze"}
+                          ) : f.analysis ? "Re-analyze" : "Analyze"}
                         </button>
                       )}
                     </div>
 
                     {/* Analysis badge */}
                     {f.analysis && (
-                      <div className="absolute top-1 right-1 bg-green-500 text-white text-xs rounded px-1 py-0.5 font-medium">
+                      <div className="absolute top-1 right-1 bg-risk-low text-paper text-xs rounded px-1 py-0.5 font-medium">
                         AI ✓
                       </div>
                     )}
@@ -299,7 +297,7 @@ export default function PatientMediaModal({ patientId, onClose }) {
           />
           <button
             onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 text-white/70 hover:text-white"
+            className="absolute top-4 right-4 text-paper/70 hover:text-paper"
           >
             <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -1,32 +1,84 @@
 /** @type {import('tailwindcss').Config} */
+
+// MediCluster design system: warm paper neutrals, ink primary, muted semantic colours.
+// Default Tailwind families are remapped so every page picks up the palette.
+const neutral = {
+  50: "#f7f5f0", 100: "#efece6", 200: "#dcd8cf", 300: "#bcb6a9", 400: "#8f8b84",
+  500: "#6c6e73", 600: "#45484d", 700: "#33353a", 800: "#222428", 900: "#15171a", 950: "#0d0e10",
+};
+const accent = {
+  50: "#eef1fb", 100: "#dfe5f7", 200: "#c3cdef", 300: "#97a8e2", 400: "#6680d6",
+  500: "#3d5dcf", 600: "#2447c9", 700: "#1d39a3", 800: "#182f84", 900: "#142767", 950: "#0e1b48",
+};
+const good = {
+  50: "#eef4f0", 100: "#dfe9e2", 200: "#c2d7c9", 300: "#9bbfa8", 400: "#74a389",
+  500: "#5b8f72", 600: "#437a5c", 700: "#2f6448", 800: "#264f3a", 900: "#1e3d2d", 950: "#12261c",
+};
+const caution = {
+  50: "#fbf4e8", 100: "#f5e6c8", 200: "#ebcf98", 300: "#ddb166", 400: "#cf983f",
+  500: "#c08a2b", 600: "#a17022", 700: "#82581c", 800: "#664519", 900: "#4f3615", 950: "#33230e",
+};
+const warn = {
+  50: "#fcf0ea", 100: "#f8dfd2", 200: "#f0bfa5", 300: "#e89a73", 400: "#e0703f",
+  500: "#cc5f2e", 600: "#b4501f", 700: "#92401a", 800: "#733318", 900: "#5a2915", 950: "#3a1a0d",
+};
+const danger = {
+  50: "#fbeeec", 100: "#f1d9d6", 200: "#e7b8b3", 300: "#d98a83", 400: "#cd5f57",
+  500: "#c23a34", 600: "#a82f2a", 700: "#8a2622", 800: "#6e1f1c", 900: "#561a18", 950: "#360f0e",
+};
+const plum = {
+  50: "#f4f0f6", 100: "#e8e0ee", 200: "#d3c4de", 300: "#b59fc6", 400: "#9479ab",
+  500: "#7a5d93", 600: "#654b7d", 700: "#523d66", 800: "#403051", 900: "#30243d", 950: "#1e1626",
+};
+
 export default {
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
       colors: {
+        white: "#fbfaf7",
+        slate: neutral, gray: neutral, zinc: neutral, stone: neutral,
+        blue: accent, indigo: accent, sky: accent, cyan: accent,
+        emerald: good, green: good, teal: { ...good, 400: accent[600], 500: neutral[900], 600: neutral[950] },
+        amber: caution, yellow: caution,
+        orange: warn,
+        red: danger, rose: danger, pink: danger,
+        violet: plum, purple: plum, fuchsia: plum,
+        ink: neutral[900],
+        paper: "#f3f1ec",
+        surface: "#fbfaf7",
+        sunken: "#e9e6df",
+        line: { DEFAULT: "#dcd8cf", strong: "#bcb6a9" },
         navy: {
-          950: "#eaf2ff",
-          900: "#f8fbff",
-          800: "#ffffff",
-          700: "#dbeafe",
-          600: "#bfdbfe",
-        },
-        teal: {
-          400: "#3b82f6",
-          500: "#2563eb",
-          600: "#1d4ed8",
+          950: "#e9e6df",
+          900: "#f3f1ec",
+          800: "#fbfaf7",
+          700: "#e9e6df",
+          600: "#dcd8cf",
         },
         risk: {
-          low: "#93c5fd",
-          moderate: "#60a5fa",
-          high: "#2563eb",
-          critical: "#1e3a8a",
-          noise: "#94a3b8",
+          low: "#5b8f72",
+          moderate: "#c08a2b",
+          high: "#e0703f",
+          critical: "#c23a34",
+          noise: "#a19c92",
         },
       },
+      borderRadius: {
+        sm: "2px", DEFAULT: "4px", md: "4px", lg: "4px", xl: "6px", "2xl": "8px", "3xl": "12px",
+      },
+      boxShadow: {
+        sm: "0 1px 0 rgba(21,23,26,0.04)",
+        DEFAULT: "0 1px 2px rgba(21,23,26,0.06)",
+        md: "0 2px 8px rgba(21,23,26,0.06)",
+        lg: "0 8px 24px rgba(21,23,26,0.08)",
+        xl: "0 12px 32px rgba(21,23,26,0.10)",
+        "2xl": "0 20px 48px rgba(21,23,26,0.14)",
+      },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans: ["IBM Plex Sans", "system-ui", "sans-serif"],
+        mono: ["IBM Plex Mono", "monospace"],
+        serif: ["Newsreader", "Georgia", "serif"],
       },
     },
   },

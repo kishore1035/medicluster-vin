@@ -10,30 +10,30 @@ import InsightsPage from './pages/InsightsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import MobileFleetPage from './pages/MobileFleetPage';
 import CallerVoicePortalPage from './pages/CallerVoicePortalPage';
+import { T, SANS } from './theme/tokens';
 
-/* ── Light theme ── */
+/* ── MediCluster theme ── */
 const theme = createTheme({
   palette: {
     mode: 'light',
-    primary:    { main: '#2563EB' },
-    secondary:  { main: '#2563EB' },
-    success:    { main: '#2563EB' },
-    warning:    { main: '#E3A94F' },
-    error:      { main: '#E25C50' },
-    info:       { main: '#2563EB' },
-    background: { default: '#F8FAFC', paper: '#FFFFFF' },
-    text:       { primary: '#0F172A', secondary: '#475569' },
-    divider:    '#E2E8F0',
+    primary:    { main: T.tx },
+    secondary:  { main: T.ac },
+    success:    { main: T.g },
+    warning:    { main: T.y },
+    error:      { main: T.r },
+    info:       { main: T.ac },
+    background: { default: T.bg, paper: T.sf },
+    text:       { primary: T.tx, secondary: T.tx2 },
+    divider:    T.bd,
   },
-  typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-  },
+  shape: { borderRadius: 3 },
+  typography: { fontFamily: SANS },
   components: {
-    MuiButton:  { styleOverrides: { root: { textTransform: 'none', borderRadius: 9, fontWeight: 700 } } },
-    MuiPaper:   { styleOverrides: { root: { borderRadius: 12, backgroundImage: 'none' } } },
+    MuiButton:  { styleOverrides: { root: { textTransform: 'none', borderRadius: 3, fontWeight: 500, boxShadow: 'none' } } },
+    MuiPaper:   { styleOverrides: { root: { borderRadius: 3, backgroundImage: 'none' } } },
     MuiDrawer:  { styleOverrides: { paper: { backgroundImage: 'none' } } },
-    MuiTab:     { styleOverrides: { root: { textTransform: 'none', minHeight: 36, fontWeight: 600 } } },
-    MuiChip:    { styleOverrides: { root: { fontWeight: 700 } } },
+    MuiTab:     { styleOverrides: { root: { textTransform: 'none', minHeight: 36, fontWeight: 500 } } },
+    MuiChip:    { styleOverrides: { root: { fontWeight: 500, borderRadius: 2 } } },
   },
 });
 

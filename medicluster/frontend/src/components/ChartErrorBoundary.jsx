@@ -23,7 +23,7 @@ export default class ChartErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="panel h-full flex items-center justify-center text-center text-sm text-blue-800 bg-blue-50 border-blue-100">
+        <div className="panel h-full flex items-center justify-center text-center text-sm text-blue-800 bg-sunken border-line-strong">
           <div>
             <p className="font-semibold">{this.props.title ?? "Chart"} could not render.</p>
             <p className="text-xs text-blue-600 mt-1">

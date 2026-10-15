@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import { fetchNearbyHospitals } from '../api/nearbyHospitals';
+import { Page } from "../components/ui";
 
 const LIBRARIES = [];
 const MAP_CENTER_DEFAULT = { lat: 20.5937, lng: 78.9629 };
@@ -12,16 +14,8 @@ const MAP_OPTIONS = {
   clickableIcons: false,
 };
 
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 function hospitalIcon(isHospital) {
-  const color = isHospital ? '#dc2626' : '#2563eb';
+  const color = isHospital ? '#c23a34' : '#2447c9';
   const svg = encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
       <rect x="1" y="1" width="30" height="30" rx="8" fill="${color}" stroke="white" stroke-width="2"/>
@@ -40,7 +34,7 @@ function userLocationIcon() {
   return {
     path: window.google.maps.SymbolPath.CIRCLE,
     scale: 10,
-    fillColor: '#2563eb',
+    fillColor: '#2447c9',
     fillOpacity: 1,
     strokeColor: '#ffffff',
     strokeWeight: 3,
@@ -82,38 +76,13 @@ export default function NearbyHospitalsPage() {
     setLoading(true);
     setError(null);
     setSelectedIdx(null);
-    const overpassQuery = `[out:json][timeout:25];(node["amenity"="hospital"](around:${radiusKm * 1000},${c.lat},${c.lng});way["amenity"="hospital"](around:${radiusKm * 1000},${c.lat},${c.lng});node["amenity"="clinic"](around:${radiusKm * 1000},${c.lat},${c.lng});node["healthcare"="hospital"](around:${radiusKm * 1000},${c.lat},${c.lng}););out center;`;
     try {
-      const res = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        body: overpassQuery,
-        signal: AbortSignal.timeout(20000),
-      });
-      const data = await res.json();
-      if (!data.elements?.length) {
+      const mapped = await fetchNearbyHospitals(c, radiusKm);
+      if (!mapped.length) {
         setHospitals([]);
         setError(`No hospitals found within ${radiusKm}km. Try increasing the radius.`);
-        setLoading(false);
         return;
       }
-      const mapped = data.elements
-        .filter(e => (e.lat && e.lon) || (e.center?.lat && e.center?.lon))
-        .map(e => {
-          const lat = e.lat ?? e.center.lat;
-          const lng = e.lon ?? e.center.lon;
-          return {
-            place_id: String(e.id),
-            name: e.tags?.name || e.tags?.['name:en'] || 'Hospital',
-            address: e.tags?.['addr:street']
-              ? `${e.tags['addr:housenumber'] || ''} ${e.tags['addr:street']}`.trim()
-              : e.tags?.['addr:full'] || '',
-            lat, lng,
-            isHospital: e.tags?.amenity === 'hospital' || e.tags?.healthcare === 'hospital',
-            rating: null,
-            distKm: haversine(c.lat, c.lng, lat, lng),
-          };
-        })
-        .sort((a, b) => a.distKm - b.distKm);
       setHospitals(mapped);
       if (mapRef.current && mapped.length > 0) {
         const bounds = new window.google.maps.LatLngBounds();
@@ -185,31 +154,19 @@ export default function NearbyHospitalsPage() {
   }, []);
 
   return (
-    <div className="min-h-[calc(100vh-56px)] bg-slate-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="max-w-screen-2xl mx-auto flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">🏥 Nearby Hospitals</h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Search any location or click the map — powered by Google Maps
-            </p>
-          </div>
-          {locationLabel && (
-            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
-              <span className="text-xs">📍</span>
-              <span className="text-xs text-blue-700 font-medium max-w-xs truncate">{locationLabel}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-1 flex max-w-screen-2xl mx-auto w-full p-5 gap-5" style={{ minHeight: 0 }}>
+    <Page
+      title="Nearby hospitals"
+      sub="Search any location or click the map to find hospitals nearby."
+      actions={locationLabel && (
+        <span className="font-mono text-xs text-slate-600 max-w-xs truncate" title={locationLabel}>{locationLabel}</span>
+      )}
+    >
+      <div className="flex flex-col lg:flex-row gap-8" style={{ minHeight: 0 }}>
         {/* ── Left panel ── */}
-        <div className="w-80 flex-shrink-0 flex flex-col gap-4" style={{ maxHeight: 'calc(100vh - 136px)', overflowY: 'auto' }}>
+        <div className="lg:w-80 flex-shrink-0 flex flex-col gap-4">
 
-          <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-            <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Find Hospitals Near</p>
+          <div className="border-t border-ink p-4 space-y-3">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Find Hospitals Near</p>
 
             <div className="flex gap-2">
               <input
@@ -217,25 +174,25 @@ export default function NearbyHospitalsPage() {
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 placeholder="City, area, or address…"
-                className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 placeholder:text-slate-400"
+                className="flex-1 text-sm border border-slate-200 rounded-[3px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink/10 text-slate-700 placeholder:text-slate-400"
               />
               <button
                 onClick={handleSearch}
                 disabled={loading || !query.trim() || !isLoaded}
-                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm"
+                className="px-3 py-2 bg-ink text-paper rounded-[3px] hover:bg-slate-700 disabled:opacity-50 transition-colors text-sm"
               >
-                🔍
+                Search
               </button>
             </div>
 
             <button
               onClick={useMyLocation}
               disabled={geoLoading || loading || !isLoaded}
-              className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors text-sm font-semibold disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-line-strong text-blue-700 rounded-[3px] hover:bg-sunken transition-colors text-sm font-semibold disabled:opacity-50"
             >
               {geoLoading
-                ? <><div className="w-3.5 h-3.5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />Getting location…</>
-                : <><span>📍</span>Use My Location</>}
+                ? <><div className="w-3.5 h-3.5 border-2 border-line-strong border-t-blue-600 rounded-full animate-spin" />Getting location…</>
+                : <><span></span>Use My Location</>}
             </button>
 
             <div>
@@ -243,9 +200,7 @@ export default function NearbyHospitalsPage() {
               <div className="flex gap-1.5">
                 {[2, 5, 10, 20].map(r => (
                   <button key={r} onClick={() => handleRadiusChange(r)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
-                      radius === r ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-200 text-slate-600 hover:border-blue-400'
-                    }`}>
+                    className={`flex-1 py-1.5 rounded-[3px] text-xs font-semibold border transition-colors ${ radius === r ? 'bg-ink text-paper border-ink' : 'border-slate-200 text-slate-600 hover:border-line-strong' }`}>
                     {r}km
                   </button>
                 ))}
@@ -258,14 +213,14 @@ export default function NearbyHospitalsPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2">
-              <span className="text-red-500 text-sm mt-0.5 flex-shrink-0">⚠</span>
+            <div className="bg-surface border border-red-200 rounded-[3px] px-4 py-3 flex items-start gap-2">
+              <span className="text-red-500 text-sm mt-0.5 flex-shrink-0"></span>
               <p className="text-xs text-red-700">{error}</p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-white rounded-xl border border-slate-200 p-6 text-center">
+            <div className="border-t border-ink p-6 text-center">
               <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
               <p className="text-sm text-slate-500">Searching nearby hospitals…</p>
               <p className="text-xs text-slate-400 mt-1">Querying Google Places</p>
@@ -273,8 +228,8 @@ export default function NearbyHospitalsPage() {
           )}
 
           {!loading && !hospitals.length && !error && isLoaded && (
-            <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-              <div className="text-4xl mb-3">🏥</div>
+            <div className="border-t border-ink p-8 text-center">
+              <div className="text-4xl mb-3"></div>
               <p className="text-sm font-semibold text-slate-700">Search for a location</p>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
                 Type an address, click "Use My Location", or click anywhere on the map
@@ -283,9 +238,9 @@ export default function NearbyHospitalsPage() {
           )}
 
           {!loading && hospitals.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="border-t border-ink overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white">
-                <p className="text-xs font-bold text-slate-700">
+                <p className="text-xs font-semibold text-slate-700">
                   {hospitals.length} result{hospitals.length !== 1 ? 's' : ''} found
                 </p>
                 <span className="text-xs text-slate-400">within {radius}km</span>
@@ -297,19 +252,15 @@ export default function NearbyHospitalsPage() {
                   <div
                     key={h.place_id}
                     onClick={() => selectHospital(h, i)}
-                    className={`px-4 py-3 cursor-pointer border-b border-slate-50 transition-all hover:bg-slate-50 ${
-                      isSelected ? 'bg-blue-50 border-l-[3px] border-l-blue-500' : ''
-                    }`}
+                    className={`px-4 py-3 cursor-pointer border-b border-slate-50 transition-all hover:bg-slate-50 ${ isSelected ? 'bg-sunken border-l-[3px] border-l-blue-500' : '' }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-slate-800 leading-snug">{h.name}</p>
+                        <p className="text-xs font-semibold text-slate-800 leading-snug">{h.name}</p>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           <span className="text-xs font-semibold text-slate-500">{h.distKm.toFixed(1)} km</span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                            h.isHospital ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
-                          }`}>{h.isHospital ? 'Hospital' : 'Medical'}</span>
-                          {h.rating && <span className="text-xs text-slate-400">⭐ {h.rating}</span>}
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${ h.isHospital ? 'bg-sunken text-blue-700' : 'bg-surface text-emerald-700' }`}>{h.isHospital ? 'Hospital' : 'Medical'}</span>
+                          {h.rating && <span className="font-mono text-xs text-slate-500">{h.rating} rating</span>}
                         </div>
                         {h.address && <p className="text-xs text-slate-400 mt-0.5 truncate">{h.address}</p>}
                         <a
@@ -333,7 +284,7 @@ export default function NearbyHospitalsPage() {
         </div>
 
         {/* ── Map ── */}
-        <div className="flex-1 rounded-xl border border-slate-200 overflow-hidden shadow-sm relative" style={{ minHeight: 500 }}>
+        <div className="flex-1 rounded-[3px] border border-slate-200 overflow-hidden relative" style={{ minHeight: 500 }}>
           {isLoaded ? (
             <GoogleMap
               mapContainerStyle={{ width: '100%', height: '100%' }}
@@ -369,15 +320,15 @@ export default function NearbyHospitalsPage() {
                   onCloseClick={() => setSelectedIdx(null)}
                 >
                   <div style={{ fontFamily: 'system-ui,sans-serif', minWidth: 170, maxWidth: 220 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3, color: '#1e293b' }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3, color: '#222428' }}>
                       {hospitals[selectedIdx].name}
                     </div>
-                    <div style={{ color: '#64748b', fontSize: 11 }}>
+                    <div style={{ color: '#6c6e73', fontSize: 11 }}>
                       {hospitals[selectedIdx].distKm.toFixed(1)} km away
-                      {hospitals[selectedIdx].rating ? ` · ⭐ ${hospitals[selectedIdx].rating}` : ''}
+                      {hospitals[selectedIdx].rating ? ` · ${hospitals[selectedIdx].rating} rating` : ''}
                     </div>
                     {hospitals[selectedIdx].address && (
-                      <div style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>
+                      <div style={{ color: '#a19c92', fontSize: 11, marginTop: 2 }}>
                         {hospitals[selectedIdx].address}
                       </div>
                     )}
@@ -386,7 +337,7 @@ export default function NearbyHospitalsPage() {
                       target="_blank" rel="noreferrer"
                       style={{
                         display: 'inline-block', marginTop: 7, padding: '3px 10px',
-                        background: '#2563eb', color: 'white', borderRadius: 5,
+                        background: '#2447c9', color: 'white', borderRadius: 5,
                         fontSize: 11, fontWeight: 600, textDecoration: 'none',
                       }}
                     >
@@ -399,7 +350,7 @@ export default function NearbyHospitalsPage() {
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-slate-100">
               <div className="text-center">
-                <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
+                <div className="w-8 h-8 border-2 border-line-strong border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
                 <p className="text-sm text-slate-500">Loading Google Maps…</p>
               </div>
             </div>
@@ -408,9 +359,8 @@ export default function NearbyHospitalsPage() {
           {/* Hint overlay when no location selected */}
           {isLoaded && !center && (
             <div style={{ pointerEvents: 'none' }} className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-lg border border-slate-200 text-center max-w-xs">
-                <div className="text-3xl mb-2">🗺️</div>
-                <p className="text-sm font-bold text-slate-700">Pick a location</p>
+              <div className="bg-white/90 backdrop-blur-sm rounded-[3px] px-6 py-4 border border-slate-200 text-center max-w-xs">
+                <p className="text-sm font-semibold text-slate-700">Pick a location</p>
                 <p className="text-xs text-slate-500 mt-1">
                   Search an address, use GPS, or click anywhere on the map to find hospitals near that spot
                 </p>
@@ -419,6 +369,6 @@ export default function NearbyHospitalsPage() {
           )}
         </div>
       </div>
-    </div>
+    </Page>
   );
 }

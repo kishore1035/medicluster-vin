@@ -6,12 +6,14 @@
  *
  *   GET /api/health/ollama   → key pool snapshot (no key values returned)
  *   GET /api/health/ollama/pool → same data, raw shape (for dashboards)
+ *   GET /api/health/ml   → whether the Python ML engine answers
  *
  * Never returns the actual key strings — only labels, regions, and health
  * state — so this endpoint is safe to expose without auth.
  */
 
 const express = require("express");
+const axios = require("axios");
 const {
   getConfig,
   getMode,
@@ -60,6 +62,17 @@ router.get("/ollama", async (_req, res) => {
 
 router.get("/ollama/pool", (_req, res) => {
   res.json(_safeSnapshot());
+});
+
+const ML_ENGINE_URL = process.env.ML_ENGINE_URL || "http://localhost:8080";
+
+router.get("/ml", async (_req, res) => {
+  try {
+    await axios.get(`${ML_ENGINE_URL}/health`, { timeout: 1500 });
+    res.json({ online: true });
+  } catch {
+    res.json({ online: false });
+  }
 });
 
 module.exports = router;

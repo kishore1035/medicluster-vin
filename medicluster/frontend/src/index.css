@@ -12,61 +12,77 @@
   }
 
   body {
-    background-color: #f8fbff;
-    color: #0f172a;
-    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #f3f1ec;
+    color: #15171a;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Display headings use the editorial serif at a single weight. */
+  h1, h2 {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 400 !important;
+    letter-spacing: -0.01em;
+  }
+
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid #2447c9; outline-offset: 2px; }
+
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #f1f5f9; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #2563eb; }
+  ::-webkit-scrollbar-track { background: #efece6; }
+  ::-webkit-scrollbar-thumb { background: #bcb6a9; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #6c6e73; }
 }
 
 @layer components {
+  /* Sections are flat: a ruled header (.section-label) over content, no boxed card. */
   .panel {
-    @apply bg-white border border-slate-200 rounded-xl p-4 shadow-sm;
+    @apply flex flex-col min-w-0;
   }
 
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold
-           px-4 py-2 rounded-lg transition-all duration-150
+    @apply bg-ink hover:bg-slate-700 active:bg-black text-paper font-medium
+           px-4 py-2 rounded transition-all duration-150
            disabled:opacity-40 disabled:cursor-not-allowed
-           flex items-center gap-2 justify-center shadow-sm;
+           flex items-center gap-2 justify-center;
   }
 
   .btn-secondary {
-    @apply bg-white hover:bg-slate-50 active:bg-slate-100
-           border border-slate-200 hover:border-slate-300
-           text-slate-700 font-medium px-4 py-2 rounded-lg
+    @apply bg-transparent hover:bg-sunken active:bg-slate-200
+           border border-line-strong hover:border-slate-500
+           text-ink font-medium px-4 py-2 rounded
            transition-all duration-150
            flex items-center gap-2 justify-center;
   }
 
   /* ── Risk tier badges — semantic colours ─────────────────────────── */
-  .badge-low      { @apply bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-2.5 py-0.5 rounded-full font-semibold; }
-  .badge-moderate { @apply bg-amber-50   text-amber-700   border border-amber-200   text-xs px-2.5 py-0.5 rounded-full font-semibold; }
-  .badge-high     { @apply bg-orange-50  text-orange-700  border border-orange-200  text-xs px-2.5 py-0.5 rounded-full font-semibold; }
-  .badge-critical { @apply bg-red-50     text-red-700     border border-red-200     text-xs px-2.5 py-0.5 rounded-full font-semibold; }
-  .badge-noise    { @apply bg-slate-100  text-slate-500   border border-slate-200   text-xs px-2.5 py-0.5 rounded-full font-semibold; }
+  .badge-low      { @apply bg-transparent text-emerald-600 border border-current text-xs px-2 py-0.5 rounded-sm font-semibold; }
+  .badge-moderate { @apply bg-transparent text-amber-600 border border-current text-xs px-2 py-0.5 rounded-sm font-semibold; }
+  .badge-high     { @apply bg-transparent text-orange-600 border border-current text-xs px-2 py-0.5 rounded-sm font-semibold; }
+  .badge-critical { @apply bg-transparent text-red-600 border border-current text-xs px-2 py-0.5 rounded-sm font-semibold; }
+  .badge-noise    { @apply bg-transparent text-slate-500 border border-current text-xs px-2 py-0.5 rounded-sm font-semibold; }
 
   .input-field {
-    @apply bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-100
+    @apply bg-surface border border-line-strong focus:border-ink focus:ring-1 focus:ring-ink/10
            focus:outline-none text-slate-900 placeholder-slate-400
-           rounded-lg px-3 py-2 text-sm w-full transition-all;
+           rounded px-3 py-2 text-sm w-full transition-all;
   }
 
   .section-label {
-    @apply text-xs font-bold uppercase tracking-widest text-slate-400 mb-3;
+    @apply font-sans text-[13px] font-semibold normal-case tracking-normal text-ink pb-2 mb-3 border-b border-ink;
+  }
+
+  /* Small uppercase mono caption (field groups, table heads). */
+  .eyebrow {
+    @apply font-mono text-[11px] font-normal uppercase tracking-[0.08em] text-slate-500;
   }
 }
 
 /* ── Spinner ──────────────────────────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
-  border: 2px solid #e2e8f0;
-  border-top-color: #2563eb;
+  border: 2px solid #dcd8cf;
+  border-top-color: #15171a;
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
 }
@@ -77,3 +93,10 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 .fade-in { animation: fadeIn 0.3s ease forwards; }
+
+/* ── Printing a patient report: only the report sheet ─────────────── */
+@media print {
+  body.printing-report * { visibility: hidden; }
+  body.printing-report #report, body.printing-report #report * { visibility: visible; }
+  body.printing-report #report { position: absolute; inset: 0 auto auto 0; width: 100%; max-width: none; }
+}

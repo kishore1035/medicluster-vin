@@ -1,0 +1,8 @@
+{
+  "name": "ambulance-dispatch",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "start": "PORT=3001 node demo-server.js"
+  }
+}

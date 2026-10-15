@@ -1,0 +1,34 @@
+// Clinician app sections, in sidebar order. Numbers ("01", "02", …) follow this order.
+export const NAV_GROUPS = [
+  { label: "Overview", items: [
+    { to: "/",          label: "Home" },
+    { to: "/alerts",    label: "Alerts" },
+    { to: "/dashboard", label: "Dashboard" },
+  ] },
+  { label: "Analyze", items: [
+    { to: "/imaging",  label: "Imaging" },
+    { to: "/predict",  label: "Predict" },
+    { to: "/ml-tools", label: "ML Tools" },
+  ] },
+  { label: "Patients", items: [
+    { to: "/patient",   label: "Patients" },
+    { to: "/reminders", label: "Reminders" },
+    { to: "/reports",   label: "Reports" },
+  ] },
+  { label: "AI", items: [
+    { to: "/ask-ai",      label: "CliniQ" },
+    { to: "/clinical-ai", label: "Clinical AI" },
+  ] },
+  { label: "Operations", items: [
+    { to: "/hospitals", label: "Hospitals" },
+    { href: "http://localhost:5174", label: "Dispatch" },
+  ] },
+];
+
+export const NAV_ITEMS = NAV_GROUPS.flatMap((g) =>
+  g.items.map((item) => ({ ...item, group: g.label }))
+).map((item, i) => ({ ...item, num: String(i + 1).padStart(2, "0") }));
+
+export function isActive(to, pathname) {
+  return to === "/" ? pathname === "/" : pathname.startsWith(to);
+}

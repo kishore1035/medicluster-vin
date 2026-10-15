@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/apiClient";
 
 export default function ApiKeysCard() {
   const [keys, setKeys] = useState({
@@ -19,7 +19,7 @@ export default function ApiKeysCard() {
   const fetchKeys = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/settings/keys");
+      const res = await api.get("/settings/keys");
       setKeys({
         ollamaHost: res.data.ollamaHost,
         ollamaKey: res.data.ollamaKeyMasked || "",
@@ -37,7 +37,7 @@ export default function ApiKeysCard() {
     setSaving(true);
     setMessage(null);
     try {
-      await axios.post("/api/settings/keys", keys);
+      await api.post("/settings/keys", keys);
       setMessage({ type: "success", text: "Keys updated successfully!" });
       fetchKeys();
     } catch (e) {
@@ -47,16 +47,13 @@ export default function ApiKeysCard() {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden md:col-span-2">
+    <div className="border-t border-ink overflow-hidden md:col-span-2">
       <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 bg-slate-50">
-        <span className="text-lg">🔑</span>
         <h2 className="font-semibold text-slate-800 text-sm flex-1">Chatbot API Keys Manager</h2>
       </div>
       <form onSubmit={handleSave} className="p-5 space-y-4">
         {message && (
-          <div className={`p-3 rounded-lg text-xs font-semibold ${
-            message.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-          }`}>
+          <div className={`p-3 rounded-[3px] text-xs font-semibold ${ message.type === "success" ? "bg-surface text-green-700" : "bg-surface text-red-700" }`}>
             {message.text}
           </div>
         )}
@@ -70,7 +67,7 @@ export default function ApiKeysCard() {
                 type="text"
                 value={keys.ollamaHost}
                 onChange={(e) => setKeys({ ...keys, ollamaHost: e.target.value })}
-                className="w-full text-xs border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 outline-none"
+                className="w-full text-xs border border-slate-200 rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
               />
             </div>
             <div>
@@ -79,7 +76,7 @@ export default function ApiKeysCard() {
                 type="password"
                 value={keys.ollamaKey}
                 onChange={(e) => setKeys({ ...keys, ollamaKey: e.target.value })}
-                className="w-full text-xs border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 outline-none"
+                className="w-full text-xs border border-slate-200 rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
                 placeholder="Enter Ollama API key"
               />
             </div>
@@ -89,7 +86,7 @@ export default function ApiKeysCard() {
                 type="password"
                 value={keys.agentRouterKey}
                 onChange={(e) => setKeys({ ...keys, agentRouterKey: e.target.value })}
-                className="w-full text-xs border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 outline-none"
+                className="w-full text-xs border border-slate-200 rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
                 placeholder="Enter AgentRouter key"
               />
             </div>
@@ -99,7 +96,7 @@ export default function ApiKeysCard() {
                 type="password"
                 value={keys.omniRouteKey}
                 onChange={(e) => setKeys({ ...keys, omniRouteKey: e.target.value })}
-                className="w-full text-xs border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 outline-none"
+                className="w-full text-xs border border-slate-200 rounded-[3px] p-2 focus:ring-1 focus:ring-ink/10 outline-none"
                 placeholder="Enter OmniRoute key"
               />
             </div>
@@ -108,7 +105,7 @@ export default function ApiKeysCard() {
         <button
           type="submit"
           disabled={saving || loading}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
+          className="px-4 py-2 bg-ink hover:bg-slate-700 disabled:opacity-50 text-paper text-sm font-semibold rounded-[3px] transition-colors"
         >
           {saving ? "Saving..." : "Save Settings"}
         </button>

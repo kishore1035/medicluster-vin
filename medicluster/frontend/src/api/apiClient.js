@@ -6,6 +6,55 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// ── Session ──────────────────────────────────────────────────────────────────
+const TOKEN_KEY = "medicluster.token";
+
+export function getToken() {
+  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+}
+
+export function setToken(token) {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch { /* storage unavailable: session lasts for this page load only */ }
+}
+
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// A 401 means the token is missing, expired or revoked; the auth context listens and signs out.
+api.interceptors.response.use(undefined, (err) => {
+  if (err?.response?.status === 401 && getToken()) {
+    setToken(null);
+    window.dispatchEvent(new Event("medicluster:signed-out"));
+  }
+  return Promise.reject(err);
+});
+
+export async function login(email, password) {
+  const res = await api.post("/auth/login", { email, password });
+  return res.data;
+}
+
+export async function register(name, email, password) {
+  const res = await api.post("/auth/register", { name, email, password });
+  return res.data;
+}
+
+export async function getMe() {
+  const res = await api.get("/auth/me");
+  return res.data.user;
+}
+
+export async function updateMe(patch) {
+  const res = await api.patch("/auth/me", patch);
+  return res.data.user;
+}
+
 /**
  * Upload a CSV file and return { datasetId, featureNames, rowCount, preview }
  */
@@ -37,6 +86,23 @@ export async function runClustering(datasetId, algorithm, params = {}, data) {
  */
 export async function getClusterResult(id) {
   const res = await api.get(`/cluster/${id}`);
+  return res.data;
+}
+
+/** Alerts derived from clustering, reminders and imaging, each with a `read` flag. */
+export async function listAlerts() {
+  const res = await api.get("/alerts");
+  return res.data;
+}
+
+export async function ackAlerts(ids) {
+  const res = await api.post("/alerts/ack", { ids });
+  return res.data;
+}
+
+/** Whether the Python ML engine is reachable: { online: boolean } */
+export async function getMlHealth() {
+  const res = await api.get("/health/ml", { timeout: 5_000 });
   return res.data;
 }
 
@@ -188,6 +254,38 @@ export async function updateReminder(id, patch) {
 /** Delete a reminder permanently. */
 export async function deleteReminder(id) {
   const res = await api.delete(`/reminders/${id}`);
+  return res.data;
+}
+
+/** Mark one dose slot (date YYYY-MM-DD, time HH:MM) as taken. Idempotent. */
+export async function markDoseTaken(reminderId, date, time) {
+  const res = await api.post(`/reminders/${reminderId}/doses`, { date, time });
+  return res.data;
+}
+
+// ── Patient App ───────────────────────────────────────────────────────────────
+
+/** Patient-app profile: name, next visit, emergency contact. */
+export async function getPatientProfile(patientId) {
+  const res = await api.get(`/patient-app/${encodeURIComponent(patientId)}/profile`);
+  return res.data;
+}
+
+/** Update patient-app profile fields (name, nextVisit, emergencyContact). */
+export async function updatePatientProfile(patientId, patch) {
+  const res = await api.put(`/patient-app/${encodeURIComponent(patientId)}/profile`, patch);
+  return res.data;
+}
+
+/** Self-logged readings, newest first. */
+export async function listReadings(patientId) {
+  const res = await api.get(`/patient-app/${encodeURIComponent(patientId)}/readings`);
+  return res.data;
+}
+
+/** Log a reading: { type: glucose|bp|weight, value, diastolic?, context? }. */
+export async function logReading(patientId, reading) {
+  const res = await api.post(`/patient-app/${encodeURIComponent(patientId)}/readings`, reading);
   return res.data;
 }
 

@@ -6,10 +6,7 @@ import {
 
 const ALGOS = ["kmeans", "dbscan", "hierarchical", "gmm"];
 const ALGO_LABELS = { kmeans: "K-Means", dbscan: "DBSCAN", hierarchical: "Hierarchical", gmm: "GMM" };
-
-const RISK_COLORS = {
-  Low: "#93c5fd", Moderate: "#60a5fa", High: "#2563eb", Critical: "#1e3a8a", Noise: "#94a3b8",
-};
+import { RISK_COLORS } from "../theme";
 
 const METRIC_KEYS = ["silhouette", "davies_bouldin", "calinski_harabasz"];
 const METRIC_LABELS = {
@@ -75,12 +72,12 @@ export default function ComparisonPanel({ allResults }) {
                       const v = res?.metrics?.[mk];
                       const isBest = bestAlgos[mk] === algo;
                       return (
-                        <td key={mk} className={`py-2 px-3 font-mono ${isBest ? "text-blue-700 font-bold" : "text-slate-500"}`}>
+                        <td key={mk} className={`py-2 px-3 font-mono ${isBest ? "text-blue-700 font-semibold" : "text-slate-500"}`}>
                           {hasErr ? <span className="text-blue-800 text-xs">{res?.error ?? "Error"}</span>
                             : v !== null && v !== undefined ? (
                               <>
                                 {v.toFixed(3)}
-                                {isBest && <span className="ml-1 text-blue-600">★</span>}
+                                {isBest && <span className="ml-1.5 font-mono text-[10px] uppercase text-green-700">best</span>}
                               </>
                             ) : "—"}
                         </td>
@@ -114,14 +111,14 @@ export default function ComparisonPanel({ allResults }) {
               ) : (
                 <ResponsiveContainer width="100%" height={180}>
                   <ScatterChart margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                    <CartesianGrid stroke="#dbeafe" strokeDasharray="2 2" />
-                    <XAxis dataKey="x" type="number" tick={{ fontSize: 9, fill: "#475569" }} />
-                    <YAxis dataKey="y" type="number" tick={{ fontSize: 9, fill: "#475569" }} />
+                    <CartesianGrid stroke="#dcd8cf" strokeDasharray="2 2" />
+                    <XAxis dataKey="x" type="number" tick={{ fontSize: 9, fill: "#45484d" }} />
+                    <YAxis dataKey="y" type="number" tick={{ fontSize: 9, fill: "#45484d" }} />
                     <ZAxis range={[15, 15]} />
                     <Tooltip
                       content={({ active, payload }) =>
                         active && payload?.length ? (
-                          <div className="bg-white border border-blue-100 rounded px-2 py-1 text-xs text-slate-700">
+                          <div className="bg-white border border-line-strong rounded px-2 py-1 text-xs text-slate-700">
                             {payload[0].payload.x?.toFixed(2)}, {payload[0].payload.y?.toFixed(2)}
                           </div>
                         ) : null

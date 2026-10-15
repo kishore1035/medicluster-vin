@@ -35,3 +35,6 @@ env/
 
 # Claude Code local config
 .claude/
+
+# Browser test artifacts
+.playwright-mcp/

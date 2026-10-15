@@ -15,6 +15,13 @@ const ReminderSchema = new mongoose.Schema(
     days:           { type: [String], default: [] },    // for weekly: ["Mon","Wed","Fri"]
     notes:          { type: String, default: "" },
     active:         { type: Boolean, default: true },
+    pillsLeft:      { type: Number, default: null },     // null = not tracked
+    refillRequestedAt: { type: Date, default: null },
+    // One entry per dose slot the patient confirmed: date "YYYY-MM-DD" + slot time "HH:MM"
+    doseLog: {
+      type: [{ date: String, time: String, takenAt: { type: Date, default: Date.now }, _id: false }],
+      default: [],
+    },
   },
   { timestamps: true }
 );

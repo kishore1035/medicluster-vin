@@ -5,6 +5,7 @@ import {
   getOptimalK, detectAnomalies, explainClusters,
   checkDrugInteractions, askPatients, reduceDimensions,
 } from "../api/apiClient";
+import { Page, Section } from "../components/ui";
 
 // ── tiny helpers ──────────────────────────────────────────────────────────────
 const SAMPLE_PATIENTS = [
@@ -20,28 +21,19 @@ const SAMPLE_PATIENTS = [
   { age: 67, blood_pressure: 162, heart_rate: 98,  cholesterol: 255 },
 ];
 
-function Card({ title, icon, badge, children }) {
+function Card({ title, badge, children }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 bg-slate-50">
-        <span className="text-lg">{icon}</span>
-        <h2 className="font-semibold text-slate-800 text-sm flex-1">{title}</h2>
-        {badge && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 font-mono">
-            {badge}
-          </span>
-        )}
-      </div>
-      <div className="p-5">{children}</div>
-    </div>
+    <Section title={title} aside={badge && <span className="font-mono text-[11px] text-slate-500">{badge}</span>}>
+      <div className="pt-4">{children}</div>
+    </Section>
   );
 }
 
 function Result({ data, loading }) {
-  if (loading) return <p className="text-xs text-slate-400 italic mt-3">⏳ Running…</p>;
+  if (loading) return <p className="text-xs text-slate-400 italic mt-3">Running…</p>;
   if (!data) return null;
   return (
-    <pre className="mt-3 text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-auto max-h-64 text-green-700 whitespace-pre-wrap">
+    <pre className="mt-3 text-xs bg-sunken p-3 overflow-auto max-h-64 font-mono whitespace-pre-wrap">
       {JSON.stringify(data, null, 2)}
     </pre>
   );
@@ -52,7 +44,7 @@ function Btn({ onClick, loading, children }) {
     <button
       onClick={onClick}
       disabled={loading}
-      className="mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
+      className="btn-primary mt-3 h-9 text-[13px]"
     >
       {loading ? "Running…" : children}
     </button>
@@ -68,14 +60,14 @@ function Field({ label, value, onChange, type = "text", rows }) {
           rows={rows}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full text-xs border border-slate-200 rounded-lg p-2 resize-y font-mono"
+          className="w-full text-xs border border-slate-200 rounded-[3px] p-2 resize-y font-mono"
         />
       ) : (
         <input
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full text-xs border border-slate-200 rounded-lg p-2"
+          className="w-full text-xs border border-slate-200 rounded-[3px] p-2"
         />
       )}
     </div>
@@ -99,7 +91,7 @@ function NLPNotes() {
   };
 
   return (
-    <Card title="Clinical Notes Analyzer" icon="📝" badge="POST /analyze-notes">
+    <Card title="Clinical Notes Analyzer" badge="POST /analyze-notes">
       <Field label="Free-text doctor notes" value={notes} onChange={setNotes} rows={4} />
       <Btn onClick={run} loading={loading}>Analyze Notes →</Btn>
       {result && (
@@ -110,9 +102,9 @@ function NLPNotes() {
               { label: "Trajectory", value: result.trajectory },
               { label: "NLP Backend", value: result.nlp_backend },
             ].map(({ label, value, color }) => (
-              <div key={label} className="text-xs bg-slate-100 rounded-lg px-3 py-1.5">
+              <div key={label} className="text-xs bg-slate-100 rounded-[3px] px-3 py-1.5">
                 <span className="text-slate-500">{label}: </span>
-                <span className={`font-bold ${color === "red" ? "text-red-600" : color === "orange" ? "text-orange-500" : "text-slate-800"}`}>{value}</span>
+                <span className={`font-semibold ${color === "red" ? "text-red-600" : color === "orange" ? "text-orange-500" : "text-slate-800"}`}>{value}</span>
               </div>
             ))}
           </div>
@@ -130,7 +122,7 @@ function NLPNotes() {
             </div>
           )}
           {result.summary && (
-            <div className="text-xs bg-blue-50 border border-blue-100 rounded-lg p-2 text-blue-800">{result.summary}</div>
+            <div className="text-xs bg-sunken border border-line-strong rounded-[3px] p-2 text-blue-800">{result.summary}</div>
           )}
         </div>
       )}
@@ -151,7 +143,7 @@ function DrugInteractions() {
   };
 
   return (
-    <Card title="Drug Interaction Checker" icon="💊" badge="POST /drug-interactions">
+    <Card title="Drug Interaction Checker" badge="POST /drug-interactions">
       <Field label="Medications (comma-separated)" value={meds} onChange={setMeds} />
       <Btn onClick={run} loading={loading}>Check Interactions →</Btn>
       {result && (
@@ -160,7 +152,7 @@ function DrugInteractions() {
             {result.summary}
           </p>
           {result.interactions?.map((i, idx) => (
-            <div key={idx} className={`text-xs rounded-lg p-2 border ${i.severity === "major" ? "bg-red-50 border-red-200 text-red-700" : "bg-yellow-50 border-yellow-200 text-yellow-700"}`}>
+            <div key={idx} className={`text-xs rounded-[3px] p-2 border ${i.severity === "major" ? "bg-surface border-red-200 text-red-700" : "bg-surface border-yellow-200 text-yellow-700"}`}>
               <strong>[{i.severity.toUpperCase()}]</strong> {i.drugs.join(" + ")}: {i.effect}
             </div>
           ))}
@@ -187,7 +179,7 @@ function MewsScore() {
   const col = alertColor[result?.alert_level] || "slate";
 
   return (
-    <Card title="MEWS Score Calculator" icon="🚨" badge="POST /mews">
+    <Card title="MEWS Score Calculator" badge="POST /mews">
       <div className="grid grid-cols-2 gap-2">
         {Object.entries(vals).map(([k, v]) => (
           <Field key={k} label={k.replace(/_/g, " ")} value={v} onChange={val => set(k, val)} type="number" />
@@ -195,9 +187,9 @@ function MewsScore() {
       </div>
       <Btn onClick={run} loading={loading}>Calculate MEWS →</Btn>
       {result && !result.error && (
-        <div className={`mt-3 rounded-xl p-3 border ${col === "red" ? "bg-red-50 border-red-300" : col === "orange" ? "bg-orange-50 border-orange-300" : "bg-green-50 border-green-300"}`}>
+        <div className={`mt-3 rounded-[3px] p-3 border ${col === "red" ? "bg-surface border-red-300" : col === "orange" ? "bg-surface border-orange-300" : "bg-surface border-green-300"}`}>
           <p className="text-2xl font-black text-slate-800">Score: {result.mews_score}</p>
-          <p className={`text-sm font-bold uppercase mt-1 ${col === "red" ? "text-red-600" : col === "orange" ? "text-orange-600" : "text-green-600"}`}>{result.alert_level}</p>
+          <p className={`text-sm font-semibold uppercase mt-1 ${col === "red" ? "text-red-600" : col === "orange" ? "text-orange-600" : "text-green-600"}`}>{result.alert_level}</p>
           <p className="text-xs text-slate-600 mt-1">{result.recommendation}</p>
         </div>
       )}
@@ -224,7 +216,7 @@ function VitalForecast() {
   };
 
   return (
-    <Card title="Vital Signs Forecasting" icon="📈" badge="POST /forecast-vitals">
+    <Card title="Vital Signs Forecasting" badge="POST /forecast-vitals">
       <Field label="Heart Rate history (comma-separated readings)" value={hr} onChange={setHr} />
       <Field label="Systolic BP history" value={bp} onChange={setBp} />
       <Field label="Steps to forecast" value={steps} onChange={setSteps} type="number" />
@@ -232,7 +224,7 @@ function VitalForecast() {
       {result && !result.error && (
         <div className="mt-3 space-y-2">
           {Object.entries(result.forecasts || {}).map(([vital, fc]) => (
-            <div key={vital} className="text-xs bg-slate-50 rounded-lg p-2 border border-slate-200">
+            <div key={vital} className="text-xs bg-slate-50 rounded-[3px] p-2 border border-slate-200">
               <p className="font-semibold text-slate-700 capitalize">{vital.replace(/_/g, " ")}</p>
               <p className="text-blue-600">Next {steps}: {fc.forecasts?.join(" → ")}</p>
               <p className="text-slate-400">Method: {fc.method}</p>
@@ -263,7 +255,7 @@ function OptimalK() {
   };
 
   return (
-    <Card title="Optimal-K Selector" icon="🔢" badge="POST /optimal-k">
+    <Card title="Optimal-K Selector" badge="POST /optimal-k">
       <p className="text-xs text-slate-400">Uses built-in sample patient data. Sweeps K={kMin}–{kMax} and recommends best cluster count.</p>
       <div className="flex gap-3 mt-3">
         <Field label="K min" value={kMin} onChange={setKMin} type="number" />
@@ -278,7 +270,7 @@ function OptimalK() {
               { label: "Elbow K", value: result.elbow_k },
               { label: "Silhouette K", value: result.silhouette_k },
             ].map(({ label, value, highlight }) => (
-              <div key={label} className={`text-xs rounded-lg px-3 py-2 border ${highlight ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 text-slate-700 border-slate-200"}`}>
+              <div key={label} className={`text-xs rounded-[3px] px-3 py-2 border ${highlight ? "bg-ink text-paper border-ink" : "bg-slate-50 text-slate-700 border-slate-200"}`}>
                 <p className="opacity-70">{label}</p>
                 <p className="text-xl font-black">{value}</p>
               </div>
@@ -306,7 +298,7 @@ function AnomalyDetection() {
   };
 
   return (
-    <Card title="Anomaly Detection" icon="⚠️" badge="POST /detect-anomalies">
+    <Card title="Anomaly Detection" badge="POST /detect-anomalies">
       <p className="text-xs text-slate-400">Uses sample data with 1 extreme outlier injected (age=200, BP=999). Isolation Forest flags it.</p>
       <Field label="Contamination (expected anomaly %" value={contam} onChange={setContam} type="number" />
       <Btn onClick={run} loading={loading}>Detect Anomalies →</Btn>
@@ -314,7 +306,7 @@ function AnomalyDetection() {
         <div className="mt-3 space-y-2">
           <p className="text-sm font-semibold text-slate-700">{result.anomaly_count} anomal{result.anomaly_count === 1 ? "y" : "ies"} detected</p>
           {result.feature_contributions?.slice(0, 3).map((fc, i) => (
-            <div key={i} className="text-xs bg-orange-50 border border-orange-200 rounded-lg p-2">
+            <div key={i} className="text-xs bg-surface border border-orange-200 rounded-[3px] p-2">
               <p className="font-semibold text-orange-700">Patient #{fc.patient_index} (score: {fc.anomaly_score})</p>
               {fc.top_deviations?.slice(0, 3).map(d => (
                 <p key={d.feature} className="text-orange-600">{d.feature}: z={d.z_score}</p>
@@ -340,7 +332,7 @@ function ShapExplain() {
   };
 
   return (
-    <Card title="SHAP Feature Importance" icon="🔬" badge="POST /explain">
+    <Card title="SHAP Feature Importance" badge="POST /explain">
       <p className="text-xs text-slate-400">Shows which features drive cluster assignments most. Uses sample patient data.</p>
       <Btn onClick={run} loading={loading}>Compute SHAP →</Btn>
       {result && !result.error && (
@@ -353,7 +345,7 @@ function ShapExplain() {
               <div key={f.feature} className="flex items-center gap-2 text-xs">
                 <span className="w-28 text-slate-600 truncate">{f.feature}</span>
                 <div className="flex-1 bg-slate-100 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${pct}%` }} />
+                  <div className="bg-ink h-2 rounded-full" style={{ width: `${pct}%` }} />
                 </div>
                 <span className="w-12 text-right text-slate-500">{f.mean_abs_shap.toFixed(4)}</span>
               </div>
@@ -386,18 +378,18 @@ function PatientChatbot() {
   };
 
   return (
-    <Card title="Patient Q&A Chatbot" icon="🤖" badge="POST /ask">
+    <Card title="Patient Q&A Chatbot" badge="POST /ask">
       <Field label='Ask a question (e.g. "Which High Risk patients?")'
         value={query} onChange={setQuery} />
       <Btn onClick={run} loading={loading}>Ask →</Btn>
       {result && !result.error && (
         <div className="mt-3 space-y-2">
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-800">{result.answer}</div>
+          <div className="bg-sunken border border-line-strong rounded-[3px] p-3 text-sm text-blue-800">{result.answer}</div>
           {result.matched_patients?.length > 0 && (
             <div>
               <p className="text-xs text-slate-500 mb-1">Matched {result.matched_count} patient(s):</p>
               {result.matched_patients.slice(0, 5).map(p => (
-                <div key={p.patient_id} className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 mb-1 flex gap-3">
+                <div key={p.patient_id} className="text-xs bg-slate-50 border border-slate-200 rounded-[3px] px-3 py-1.5 mb-1 flex gap-3">
                   <span className="font-mono text-slate-600">{p.patient_id}</span>
                   <span className={`font-semibold ${p.risk_tier === "Critical" ? "text-red-600" : p.risk_tier === "High" ? "text-orange-500" : "text-green-600"}`}>{p.risk_tier}</span>
                   <span className="text-slate-400">Age {p.age}</span>
@@ -414,26 +406,9 @@ function PatientChatbot() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function MLToolsPage() {
   return (
-    <div className="min-h-[calc(100vh-56px)] bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center shadow-sm">
-            <span className="text-white text-lg">🧠</span>
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">ML & NLP Tools</h1>
-            <p className="text-xs text-slate-400">Clinical notes analysis · MEWS scoring · Vital forecasting · Anomaly detection · SHAP · Chatbot</p>
-          </div>
-          <div className="ml-auto flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-xs text-slate-400">ML Engine live on :8080</span>
-          </div>
-        </div>
-      </div>
-
+    <Page title="ML & NLP tools" sub="Clinical notes analysis, MEWS scoring, vital forecasting and drug interactions.">
       {/* Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-12">
         <ApiKeysCard />
         <NLPNotes />
         <DrugInteractions />
@@ -444,6 +419,6 @@ export default function MLToolsPage() {
         <ShapExplain />
         <PatientChatbot />
       </div>
-    </div>
+    </Page>
   );
 }

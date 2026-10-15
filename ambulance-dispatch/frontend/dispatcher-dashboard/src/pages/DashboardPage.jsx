@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Button, IconButton, Tooltip, Snackbar, Alert, Badge } from '@mui/material';
-import {
-  Notifications, Refresh, Add, FilterList,
-  Close, AutoAwesome, CheckCircle, Warning
-} from '@mui/icons-material';
+import { Box, Typography, Button, IconButton, Snackbar, Alert, Menu, MenuItem, Divider, ListItemText } from '@mui/material';
+import { Close, CheckCircle } from '@mui/icons-material';
 
 import DispatchMap from '../components/DispatchMap';
 import IncidentQueue from '../components/IncidentQueue';
+import { FILTERS } from '../components/incidentFilters';
 import StatsCards from '../components/StatsCards';
+import UnitsPanel from '../components/UnitsPanel';
 import AssignmentWizard from '../components/AssignmentWizard';
 import SOSAlertModal from '../components/SOSAlertModal';
 import LiveTrackingPanel from '../components/LiveTrackingPanel';
@@ -17,58 +16,89 @@ import ShiftReportModal from '../components/ShiftReportModal';
 import IncidentTimeline from '../components/IncidentTimeline';
 import QuickCommsPanel from '../components/QuickCommsPanel';
 import WeatherWidget from '../components/WeatherWidget';
+import GreenCorridorModal from '../components/GreenCorridorModal';
+import VoiceAssistantModal from '../components/VoiceAssistantModal';
+import FleetRosterModal from '../components/FleetRosterModal';
 import { useIncidents, useAmbulances, useHospitals, useDashboardStats } from '../hooks/useData';
 import socketService from '../services/socket';
 import { incidentsApi } from '../services/api';
 import { dispatchBroadcast, DISPATCH_EVENTS } from '../services/dispatchBroadcast';
 import { useNavigate } from 'react-router-dom';
-import GreenCorridorModal from '../components/GreenCorridorModal';
-import VoiceAssistantModal from '../components/VoiceAssistantModal';
-import FleetRosterModal from '../components/FleetRosterModal';
-import { Traffic, Mic, DirectionsCar } from '@mui/icons-material';
+import { T, MONO, SERIF, tagSx, btnSx } from '../theme/tokens';
 
-/* ── Evergreen tokens ── */
-const BG      = '#F8FAFC';
-const SURFACE = '#FFFFFF';
-const G       = '#2563EB';
-const TEXT    = '#0F172A';
-const DIM     = '#475569';
-const FAINT   = '#94A3B8';
-const BORDER  = '#E2E8F0';
-const BORDER2 = '#CBD5E1';
-const RED     = '#E25C50';
-const SIDEBAR = 260;
+/* ── Great-circle distance in km ── */
+function hav(lat1, lon1, lat2, lon2) {
+  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
 
-/* ── SVG cross icon ── */
-function CrossIcon({ size = 14, color = G }) {
+function nearestAvailable(ambulances, incident) {
+  if (!incident) return null;
+  const avail = ambulances.filter(a => a.latitude && a.longitude && a.status === 'AVAILABLE');
+  if (!avail.length) return null;
+  return avail.reduce((best, a) => {
+    const d = hav(a.latitude, a.longitude, incident.location_lat, incident.location_lng);
+    return d < best.d ? { a, d } : best;
+  }, { a: null, d: Infinity }).a;
+}
+
+function useClock() {
+  const fmt = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  const [now, setNow] = useState(fmt);
+  useEffect(() => {
+    const id = setInterval(() => setNow(fmt()), 15_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+function Logo() {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <path d="M8 2.5v11M2.5 8h11" stroke={color} strokeWidth="2.6" strokeLinecap="round"/>
+    <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true">
+      <rect x="1" y="1" width="6" height="6" fill={T.tx} />
+      <rect x="11" y="1" width="6" height="6" fill={T.tx} />
+      <rect x="1" y="11" width="6" height="6" fill={T.tx} />
+      <rect x="11" y="11" width="6" height="6" fill={T.r} />
     </svg>
   );
 }
 
-/* ── Tab pill ── */
-function TabPill({ label, active, onClick }) {
+/* ── Segmented control ── */
+function Segmented({ items, value, onChange, fullWidth = false, label }) {
   return (
-    <Box
-      onClick={onClick}
-      sx={{
-        flex: 1, textAlign: 'center', py: '6px', borderRadius: '7px',
-        fontSize: 12, fontWeight: 600, cursor: 'pointer',
-        color: active ? BG : TEXT,
-        background: active ? G : 'transparent',
-        transition: 'all 0.15s',
-      }}
-    >
-      {label}
+    <Box role="tablist" aria-label={label} sx={{ display: 'flex', border: `1px solid ${T.bd2}`, borderRadius: '3px', overflow: 'hidden', width: fullWidth ? '100%' : 'auto' }}>
+      {items.map((it, i) => {
+        const on = it.key === value;
+        return (
+          <Box key={it.key} component="button" type="button" role="tab" aria-selected={on} onClick={() => onChange(it.key)}
+            sx={{
+              flex: fullWidth ? 1 : 'none', height: 32, px: '14px', border: 0,
+              borderLeft: i ? `1px solid ${T.bd2}` : 0,
+              background: on ? T.tx : 'transparent', color: on ? T.bg : T.tx,
+              font: 'inherit', fontSize: 13.5, cursor: 'pointer', whiteSpace: 'nowrap',
+              '&:focus-visible': { outline: `2px solid ${T.ac}`, outlineOffset: -2 },
+            }}>
+            {it.label}
+          </Box>
+        );
+      })}
     </Box>
   );
 }
 
+const sectionHead = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: '8px', borderBottom: `1px solid ${T.tx}` };
+
+const NEXT_STEP = {
+  DISPATCHED:   { to: 'EN_ROUTE',     label: 'Mark en route',        note: ['Ambulance marked en route', 'info'] },
+  EN_ROUTE:     { to: 'ON_SCENE',     label: 'Mark on scene',        note: ['Ambulance arrived on scene', 'warning'] },
+  ON_SCENE:     { to: 'TRANSPORTING', label: 'Depart scene',         note: ['Patient in transit to ER', 'info'] },
+  TRANSPORTING: { to: 'RESOLVED',     label: 'Complete handover',    note: ['Emergency resolved. Hospital handover complete.', 'success'] },
+};
+
 export default function DashboardPage({ user, onLogout }) {
-  const { incidents: remoteIncidents, loading: incidentsLoading, refetch: refetchIncidents } = useIncidents();
-  const { ambulances, loading: ambulancesLoading, refetch: refetchAmbulances } = useAmbulances();
+  const { incidents: remoteIncidents, refetch: refetchIncidents } = useIncidents();
+  const { ambulances, refetch: refetchAmbulances } = useAmbulances();
   const { hospitals } = useHospitals();
   const { stats } = useDashboardStats();
 
@@ -78,15 +108,13 @@ export default function DashboardPage({ user, onLogout }) {
   const [selectedIncident, setSelectedIncident]     = useState(null);
   const [activeAssignment, setActiveAssignment]     = useState(null);
   const [focusAmbulance, setFocusAmbulance]         = useState(null);
-  const [tabValue, setTabValue]                     = useState(0);
+  const [filter, setFilter]                         = useState('all');
+  const [toolsAnchor, setToolsAnchor]               = useState(null);
+  const [userAnchor, setUserAnchor]                 = useState(null);
+  const clock                                       = useClock();
   const [wizardOpen, setWizardOpen]                 = useState(false);
   const [sosModalOpen, setSosModalOpen]             = useState(false);
   const [shiftReportOpen, setShiftReportOpen]       = useState(false);
-  const [fleetOpen, setFleetOpen]                   = useState(false);
-  const [hospitalOpen, setHospitalOpen]             = useState(false);
-  const [activityOpen, setActivityOpen]             = useState(false);
-  const [timelineOpen, setTimelineOpen]             = useState(false);
-  const [commsOpen, setCommsOpen]                   = useState(false);
   const [snackbar, setSnackbar]                     = useState(null);
   const [autoDispatchLoading, setAutoDispatchLoading] = useState(false);
   const [autoDispatchResult, setAutoDispatchResult]   = useState(null);
@@ -96,13 +124,10 @@ export default function DashboardPage({ user, onLogout }) {
   const [rosterOpen, setRosterOpen]                 = useState(false);
   const navigate = useNavigate();
 
-  // Ensure only one right-panel open at a time
-  const openFleet    = () => { setFleetOpen(true);    setHospitalOpen(false); setActivityOpen(false); setTimelineOpen(false); setCommsOpen(false); };
-  const openHospital = () => { setHospitalOpen(true); setFleetOpen(false);    setActivityOpen(false); setTimelineOpen(false); setCommsOpen(false); };
-  const openActivity = () => { setActivityOpen(true); setFleetOpen(false);    setHospitalOpen(false); setTimelineOpen(false); setCommsOpen(false); };
-  const openTimeline = () => { setTimelineOpen(true); setFleetOpen(false);    setHospitalOpen(false); setActivityOpen(false); setCommsOpen(false); };
-  const openComms    = () => { setCommsOpen(true);    setFleetOpen(false);    setHospitalOpen(false); setActivityOpen(false); setTimelineOpen(false); };
-  const closeAll     = () => { setFleetOpen(false);   setHospitalOpen(false); setActivityOpen(false); setTimelineOpen(false); setCommsOpen(false); };
+  // Only one map overlay panel open at a time.
+  const [panel, setPanel] = useState(null); // 'fleet' | 'hospital' | 'activity' | 'timeline'
+  const togglePanel = (name) => setPanel(p => (p === name ? null : name));
+  const closeAll = () => setPanel(null);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -115,7 +140,7 @@ export default function DashboardPage({ user, onLogout }) {
     setSelectedIncident(incident);
     setActiveAssignment(null);
     // Auto-open timeline when an incident is selected
-    if (incident) openTimeline();
+    if (incident) setPanel(p => (p === 'timeline' ? p : null));
   };
 
   const handleAcknowledge = async () => {
@@ -139,16 +164,9 @@ export default function DashboardPage({ user, onLogout }) {
 
     const iLat = selectedIncident.location_lat, iLng = selectedIncident.location_lng;
 
-    function hav(lat1, lon1, lat2, lon2) {
-      const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    const avail = ambulances.filter(a => a.latitude && a.longitude && a.status === 'AVAILABLE');
-    if (!avail.length) { setSnackbar({ message:'No available ambulances', severity:'error' }); setAutoDispatchLoading(false); return; }
-
-    const bestAmb = avail.reduce((b,a) => { const d=hav(a.latitude,a.longitude,iLat,iLng); return d<b.dist?{amb:a,dist:d}:b; }, { amb:avail[0], dist:Infinity }).amb;
+    // Same pick the "Assign <unit>" button shows.
+    const bestAmb = nearestAvailable(fleetAmbulances.length > 0 ? fleetAmbulances : ambulances, selectedIncident);
+    if (!bestAmb) { setSnackbar({ message:'No available ambulances', severity:'error' }); setAutoDispatchLoading(false); return; }
     const availH  = hospitals.filter(h => h.latitude && h.longitude && (h.available_beds||0)>0);
     const bestH   = availH.length ? availH.reduce((b,h) => { const d=hav(iLat,iLng,h.latitude,h.longitude); const sc=(1/(d+0.1))*0.6+((h.available_beds||0)/50)*0.4; return sc>b.score?{hosp:h,score:sc,distKm:d}:b; }, { hosp:availH[0], score:-Infinity, distKm:0 }) : null;
 
@@ -204,12 +222,6 @@ export default function DashboardPage({ user, onLogout }) {
 
     const iLat = Number(inc.location_lat) || 12.9982;
     const iLng = Number(inc.location_lng) || 77.5921;
-
-    function hav(lat1, lon1, lat2, lon2) {
-      const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
 
     const currentFleet = fleetAmbulances.length > 0 ? fleetAmbulances : ambulances;
     const availAmbs = currentFleet.filter(a => a.status === 'AVAILABLE' || !a.assigned_incident_id);
@@ -269,412 +281,119 @@ export default function DashboardPage({ user, onLogout }) {
 
   const activeCount  = incidents.filter(i=>!['RESOLVED','CANCELLED'].includes(i.status)).length;
   const pendingCount = incidents.filter(i=>i.status==='PENDING').length;
+  const fleet = fleetAmbulances.length > 0 ? fleetAmbulances : ambulances;
+  const nearest = nearestAvailable(fleet, selectedIncident);
+  const sel = selectedIncident;
+  const canDispatch = sel && ['PENDING','ACKNOWLEDGED'].includes(sel.status);
+  const next = sel && NEXT_STEP[sel.status];
+  const initials = (user?.name || 'Dispatcher').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
-  const tabs = ['Active','Pending','All'];
+  const tool = (fn) => () => { setToolsAnchor(null); fn(); };
+  const overlaySx = (open, width = 300) => ({
+    position: 'absolute', top: 0, right: 0, bottom: 0, width, maxWidth: '100%',
+    background: T.sf, borderLeft: `1px solid ${T.bd}`, display: 'flex', flexDirection: 'column',
+    transform: open ? 'translateX(0)' : 'translateX(100%)', zIndex: 1000,
+    // Closed panels must not take focus or be scrolled into view.
+    visibility: open ? 'visible' : 'hidden',
+    transition: open ? 'transform 0.25s ease' : 'transform 0.25s ease, visibility 0s linear 0.25s',
+  });
 
   return (
-    <Box sx={{ display:'flex', flexDirection:'column', height:'100vh', width:'100vw', background:BG, overflow:'hidden', position:'fixed', top:0, left:0 }}>
+    <Box sx={{ display:'flex', flexDirection:'column', height:'100vh', width:'100%', background:T.bg, color:T.tx, overflow:'hidden' }}>
 
-      {/* ══ HEADER ══════════════════════════════════════════════════════════════ */}
-      <Box sx={{
-        height: 56, flexShrink: 0,
-        display: 'flex', alignItems: 'center', gap: '10px', px: '16px',
-        background: SURFACE,
-        borderBottom: `1px solid ${BORDER}`,
-        zIndex: 200, overflow: 'hidden',
-      }}>
-        {/* Logo & Main Nav */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Box sx={{ width:32, height:32, borderRadius:'9px', background:'rgba(37,99,235,0.12)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <CrossIcon size={14} color={G} />
-          </Box>
-          <Typography sx={{ fontSize:13, fontWeight:800, color:TEXT, whiteSpace:'nowrap', mr: 1 }}>
-            Dispatch Center
+      {/* ══ HEADER ══ */}
+      <Box component="header" sx={{ height:64, flexShrink:0, display:'flex', alignItems:'center', gap:'16px', px:{ xs:'16px', md:'32px' }, borderBottom:`1px solid ${T.bd}` }}>
+        <Box sx={{ display:'flex', alignItems:'center', gap:'10px', flex:1, minWidth:0 }}>
+          <Logo />
+          <Typography sx={{ fontFamily:SERIF, fontSize:22, letterSpacing:'-0.01em' }}>MediCluster</Typography>
+          <Typography sx={{ display:{ xs:'none', md:'block' }, fontFamily:MONO, fontSize:11, letterSpacing:'0.08em', color:T.tx3, pl:'12px', borderLeft:`1px solid ${T.bd2}` }}>
+            DISPATCH CENTER
           </Typography>
         </Box>
 
-        {/* Global Navigation Tabs */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Button
-            size="small"
-            sx={{ px: '10px', py: '5px', borderRadius: '8px', bgcolor: 'rgba(37,99,235,0.12)', color: G, fontWeight: 700, fontSize: '11px', textTransform: 'none' }}
-          >
-            Live Command
-          </Button>
-          <Button
-            size="small" onClick={() => navigate('/insights')}
-            sx={{ px: '10px', py: '5px', borderRadius: '8px', color: DIM, fontWeight: 600, fontSize: '11px', textTransform: 'none', '&:hover': { bgcolor: '#F1F5F9', color: TEXT } }}
-          >
-            AI Insights
-          </Button>
-          <Button
-            size="small" onClick={() => navigate('/analytics')}
-            sx={{ px: '10px', py: '5px', borderRadius: '8px', color: DIM, fontWeight: 600, fontSize: '11px', textTransform: 'none', '&:hover': { bgcolor: '#F1F5F9', color: TEXT } }}
-          >
-            Analytics & SLAs
-          </Button>
-          <Button
-            size="small" onClick={() => navigate('/mobile')}
-            sx={{ px: '10px', py: '5px', borderRadius: '8px', color: DIM, fontWeight: 600, fontSize: '11px', textTransform: 'none', '&:hover': { bgcolor: '#F1F5F9', color: TEXT } }}
-          >
-            Fleet Telemetry
-          </Button>
-        </Box>
+        <Segmented label="View" value="ops" onChange={(k) => k === 'ai' && navigate('/insights')}
+          items={[{ key:'ops', label:'Operations' }, { key:'ai', label:'AI insights' }]} />
 
-        <Box sx={{ flex:1 }} />
-        {/* Weather widget — compact in header */}
-        <WeatherWidget compact />
-        <Box sx={{ flex:1 }} />
-
-        {/* AI Voice Assistant Trigger */}
-        <Button
-          onClick={() => setVoiceModalOpen(true)}
-          startIcon={<Mic sx={{ fontSize: 14 }} />}
-          sx={{
-            px:'10px', py:'6px', borderRadius:'8px', border:`1px solid ${G}`, color: G, bgcolor: 'rgba(37,99,235,0.06)', fontWeight:700, fontSize:'11px', flexShrink:0,
-            textTransform: 'none', '&:hover':{ background:'rgba(37,99,235,0.12)' }
-          }}
-        >
-          AI Voice Command
-        </Button>
-
-        {/* Fleet & Driver Roster Trigger */}
-        <Button
-          onClick={() => setRosterOpen(true)}
-          startIcon={<DirectionsCar sx={{ fontSize: 15 }} />}
-          sx={{
-            px:'11px', py:'6px', borderRadius:'8px', border:`1.5px solid #38BDF8`, color: '#0284C7', bgcolor: 'rgba(56,189,248,0.08)', fontWeight:700, fontSize:'11.5px', flexShrink:0,
-            textTransform: 'none', '&:hover':{ background:'rgba(56,189,248,0.16)', borderColor: '#0284C7' }
-          }}
-        >
-          Fleet & Driver Roster
-        </Button>
-
-        {/* Green Corridor Trigger */}
-        <Button
-          onClick={() => setGreenCorridorOpen(true)}
-          startIcon={<Traffic sx={{ fontSize: 14 }} />}
-          sx={{
-            px:'10px', py:'6px', borderRadius:'8px', border:`1px solid ${BORDER2}`, color:TEXT, fontWeight:700, fontSize:'11px', flexShrink:0,
-            textTransform: 'none', '&:hover':{ background:'#F1F5F9' }
-          }}
-        >
-          Green Corridor
-        </Button>
-
-        {/* SOS button */}
-        <Button
-          onClick={() => setSosModalOpen(true)}
-          sx={{
-            display:'flex', alignItems:'center', gap:'6px', flexShrink:0,
-            px:'11px', py:'6px', borderRadius:'8px',
-            background: RED, color:'white', fontWeight:700, fontSize:'11.5px',
-            animation: 'sosPulse 2s infinite',
-            '&:hover': { background:'#c94a3f' },
-          }}
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-            <path d="M12 3.5L22 20H2L12 3.5z" stroke="white" strokeWidth="2.2" strokeLinejoin="round"/>
-            <line x1="12" y1="10" x2="12" y2="14" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-            <circle cx="12" cy="17" r="1.1" fill="white"/>
-          </svg>
-          SOS Alert
-        </Button>
-
-        {/* Shift Report */}
-        <Button
-          onClick={() => setShiftReportOpen(true)}
-          sx={{ px:'10px', py:'6px', borderRadius:'8px', border:`1px solid ${BORDER2}`, color:TEXT, fontWeight:600, fontSize:'11px', flexShrink:0, '&:hover':{ background:'#F1F5F9' } }}
-        >
-          Shift Report
-        </Button>
-
-        {/* Driver view */}
-        <Button
-          onClick={() => window.open('/#/driver', '_blank')}
-          sx={{ px:'10px', py:'6px', borderRadius:'8px', border:`1px solid ${BORDER2}`, color:TEXT, fontWeight:600, fontSize:'11px', flexShrink:0, '&:hover':{ background:'#F1F5F9' } }}
-        >
-          Driver View
-        </Button>
-
-        {/* Comms panel toggle */}
-        <Tooltip title="Quick Comms">
-          <Box
-            onClick={() => commsOpen ? closeAll() : openComms()}
-            sx={{ width:34, height:34, borderRadius:'9px', background: commsOpen ? 'rgba(142,182,155,0.18)' : '#F1F5F9', border:`1px solid ${commsOpen ? 'rgba(142,182,155,0.35)' : 'transparent'}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.15s' }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={commsOpen ? G : TEXT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
+        <Box sx={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:'12px', flex:1, minWidth:0 }}>
+          <Box sx={{ display:{ xs:'none', lg:'block' } }}><WeatherWidget compact /></Box>
+          <Box sx={{ display:{ xs:'none', sm:'flex' }, alignItems:'center', gap:'6px', fontFamily:MONO, fontSize:11.5, color:T.gT, letterSpacing:'0.04em' }}>
+            <Box sx={{ width:6, height:6, borderRadius:'50%', background:T.g }} />LIVE · {clock}
           </Box>
-        </Tooltip>
-
-        {/* Hospital panel toggle */}
-        <Tooltip title="Hospital Status">
-          <Box
-            onClick={() => hospitalOpen ? closeAll() : openHospital()}
-            sx={{ width:34, height:34, borderRadius:'9px', background: hospitalOpen ? 'rgba(142,182,155,0.18)' : '#F1F5F9', border:`1px solid ${hospitalOpen ? 'rgba(142,182,155,0.35)' : 'transparent'}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.15s' }}
-          >
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-              <path d="M8 2.5v11M2.5 8h11" stroke={hospitalOpen ? '#2563EB' : TEXT} strokeWidth="2.3" strokeLinecap="round"/>
-            </svg>
+          <Button onClick={(e) => setToolsAnchor(e.currentTarget)} aria-haspopup="menu" sx={{ ...btnSx(false), height:32, px:'12px' }}>
+            Tools{pendingCount > 0 ? ` · ${pendingCount}` : ''}
+          </Button>
+          <Box component="button" type="button" aria-label="Account" aria-haspopup="menu" onClick={(e) => setUserAnchor(e.currentTarget)}
+            sx={{ width:32, height:32, borderRadius:'50%', border:0, background:T.sf2, color:T.tx, fontFamily:MONO, fontSize:12, fontWeight:500, cursor:'pointer' }}>
+            {initials}
           </Box>
-        </Tooltip>
-
-        {/* Activity feed toggle */}
-        <Tooltip title="Activity Feed">
-          <Box
-            onClick={() => activityOpen ? closeAll() : openActivity()}
-            sx={{ position:'relative', width:34, height:34, borderRadius:'9px', background: activityOpen ? 'rgba(142,182,155,0.18)' : '#F1F5F9', border:`1px solid ${activityOpen ? 'rgba(142,182,155,0.35)' : 'transparent'}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.15s' }}
-          >
-            <Notifications sx={{ fontSize:16, color: activityOpen ? G : TEXT }} />
-            {pendingCount > 0 && (
-              <Box sx={{ position:'absolute', top:-4, right:-4, background:RED, color:'white', fontSize:'9px', fontWeight:800, borderRadius:'8px', px:'5px', py:'1px' }}>
-                {pendingCount}
-              </Box>
-            )}
-          </Box>
-        </Tooltip>
-
-        {/* Live Fleet toggle */}
-        <Tooltip title={fleetOpen ? 'Close Fleet' : 'Live Fleet'}>
-          <Box
-            onClick={() => fleetOpen ? closeAll() : openFleet()}
-            sx={{ width:34, height:34, borderRadius:'9px', background: fleetOpen ? 'rgba(142,182,155,0.18)' : '#F1F5F9', border:`1px solid ${fleetOpen ? 'rgba(142,182,155,0.35)' : 'transparent'}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.15s' }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={fleetOpen ? G : TEXT} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="7" width="13" height="9" rx="2"/>
-              <path d="M15 10h4l3 3v3h-7"/>
-              <circle cx="7" cy="18" r="1.6"/>
-              <circle cx="18" cy="18" r="1.6"/>
-            </svg>
-          </Box>
-        </Tooltip>
-
-        {/* Refresh */}
-        <Tooltip title="Refresh">
-          <IconButton size="small" onClick={() => { refetchIncidents(); refetchAmbulances(); }} sx={{ color:TEXT, background:'#F1F5F9', borderRadius:'9px' }}>
-            <Refresh sx={{ fontSize:16 }} />
-          </IconButton>
-        </Tooltip>
-
-        {/* Avatar */}
-        <Box sx={{ width:34, height:34, borderRadius:'50%', background:'#E2E8F0', color:TEXT, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:'12.5px' }}>
-          {user?.name?.[0]||'D'}
         </Box>
       </Box>
 
-      {/* ══ BODY ════════════════════════════════════════════════════════════════ */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflow: 'hidden' }}>
+      <Menu anchorEl={toolsAnchor} open={!!toolsAnchor} onClose={() => setToolsAnchor(null)}
+        slotProps={{ paper: { sx: { border:`1px solid ${T.bd}`, boxShadow:'0 8px 24px rgba(21,23,26,0.08)', minWidth:240 } } }}>
+        <MenuItem onClick={tool(() => setVoiceModalOpen(true))}>AI voice command</MenuItem>
+        <MenuItem onClick={tool(() => setSosModalOpen(true))}>SOS alert</MenuItem>
+        <MenuItem onClick={tool(() => setGreenCorridorOpen(true))}>Green corridor</MenuItem>
+        <Divider />
+        <MenuItem onClick={tool(() => togglePanel('fleet'))}>Live fleet tracking</MenuItem>
+        <MenuItem onClick={tool(() => togglePanel('hospital'))}>Hospital status</MenuItem>
+        <MenuItem onClick={tool(() => togglePanel('activity'))}>
+          <ListItemText>Activity feed</ListItemText>
+          {pendingCount > 0 && <Box component="span" sx={tagSx('CRITICAL')}>{pendingCount}</Box>}
+        </MenuItem>
+        <MenuItem onClick={tool(() => setRosterOpen(true))}>Fleet &amp; driver roster</MenuItem>
+        <Divider />
+        <MenuItem onClick={tool(() => setShiftReportOpen(true))}>Shift report</MenuItem>
+        <MenuItem onClick={tool(() => navigate('/analytics'))}>Analytics &amp; SLAs</MenuItem>
+        <MenuItem onClick={tool(() => navigate('/mobile'))}>Fleet telemetry</MenuItem>
+        <MenuItem onClick={tool(() => window.open('/#/driver', '_blank'))}>Driver view</MenuItem>
+        <MenuItem onClick={tool(() => { refetchIncidents(); refetchAmbulances(); })}>Refresh data</MenuItem>
+      </Menu>
 
-        {/* ── Left Sidebar ── */}
-        <Box sx={{
-          width: '260px',
-          minWidth: '260px',
-          maxWidth: '260px',
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          background: SURFACE,
-          borderRight: `1px solid ${BORDER}`,
-          height: '100%',
-          overflow: 'hidden',
-          position: 'relative',
-          zIndex: 2,
-        }}>
-          {/* Sidebar header */}
-          <Box sx={{ p:'16px 16px 10px' }}>
-            <Box sx={{ display:'flex', alignItems:'center', justifyContent:'space-between', mb:'12px' }}>
-              <Box sx={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                <Typography sx={{ fontSize:14, fontWeight:700, color:TEXT }}>Incidents</Typography>
-                <Box sx={{ fontSize:11, fontWeight:700, px:'8px', py:'2px', borderRadius:'6px', color:RED, background:'rgba(226,92,80,0.14)' }}>
-                  {activeCount}
-                </Box>
-              </Box>
-              <Box sx={{ display:'flex', gap:'6px' }}>
-                <Tooltip title="New SOS">
-                  <Box onClick={() => setSosModalOpen(true)} sx={{ width:26, height:26, borderRadius:'7px', background:'rgba(226,92,80,0.12)', color:RED, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:16 }}>
-                    +
-                  </Box>
-                </Tooltip>
-                <Box sx={{ width:26, height:26, borderRadius:'7px', background:'#F1F5F9', color:DIM, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                  <FilterList sx={{ fontSize:14 }} />
-                </Box>
-              </Box>
-            </Box>
+      <Menu anchorEl={userAnchor} open={!!userAnchor} onClose={() => setUserAnchor(null)}>
+        <Box sx={{ px:2, py:1 }}>
+          <Typography sx={{ fontSize:13.5, fontWeight:500 }}>{user?.name}</Typography>
+          <Typography sx={{ fontSize:12, color:T.tx3 }}>{user?.email}</Typography>
+        </Box>
+        <Divider />
+        <MenuItem onClick={() => { setUserAnchor(null); onLogout?.(); }}>Sign out</MenuItem>
+      </Menu>
 
-            {/* Tab pills */}
-            <Box sx={{ display:'flex', gap:'4px', background:'#F1F5F9', borderRadius:'9px', p:'3px' }}>
-              {tabs.map((t,i) => (
-                <TabPill key={t} label={t} active={tabValue===i} onClick={() => setTabValue(i)} />
-              ))}
-            </Box>
+      {/* ══ KPI STRIP ══ */}
+      <Box sx={{ flexShrink:0, px:{ xs:'16px', md:'32px' }, py:'16px', borderBottom:`1px solid ${T.bd}` }}>
+        <StatsCards stats={stats} incidents={incidents} ambulances={fleet} />
+      </Box>
+
+      {/* ══ BODY ══ */}
+      <Box sx={{
+        flex:1, minHeight:0, overflow:{ xs:'auto', lg:'hidden' },
+        display:'grid', gap:'20px', p:{ xs:'16px', md:'20px 32px' },
+        gridTemplateColumns:{ xs:'minmax(0,1fr)', lg:'340px minmax(0,1fr) 340px' },
+      }}>
+
+        {/* ── Incidents ── */}
+        <Box component="section" aria-label="Incidents" sx={{ display:'flex', flexDirection:'column', gap:'12px', minHeight:0 }}>
+          <Box sx={sectionHead}>
+            <Typography sx={{ fontSize:13.5, fontWeight:600 }}>
+              Incidents <Box component="span" sx={{ color:T.tx3, fontWeight:400 }}>{activeCount}</Box>
+            </Typography>
+            <Button onClick={() => setSosModalOpen(true)} sx={{ ...btnSx(true), height:30, px:'10px', fontSize:13 }}>+ New incident</Button>
           </Box>
-
-          {/* Incident list */}
-          <Box sx={{ flex:1, overflow:'auto' }}>
-            <IncidentQueue
-              incidents={incidents}
-              onSelect={handleIncidentSelect}
-              selectedId={selectedIncident?.id}
-              filter={['active','pending','all'][tabValue]}
-            />
+          <Segmented label="Incident filter" fullWidth value={filter} onChange={setFilter}
+            items={FILTERS.map(f => ({ key:f.key, label:f.label }))} />
+          <Box sx={{ flex:1, minHeight:0, overflow:'auto' }}>
+            <IncidentQueue incidents={incidents} onSelect={handleIncidentSelect} selectedId={sel?.id} filter={filter} />
           </Box>
-
-          {/* Selected incident action panel */}
-          {selectedIncident && (
-            <Box sx={{ p:'16px', borderTop:`1px solid ${BORDER}`, background:'rgba(0,0,0,0.03)', animation:'fadeUp 0.2s ease' }}>
-              <Box sx={{ display:'flex', alignItems:'center', justifyContent:'space-between', mb:'10px' }}>
-                <Typography sx={{ fontSize:13, fontWeight:700, color:TEXT }}>
-                  {selectedIncident.incident_type}
-                </Typography>
-                <IconButton size="small" onClick={() => setSelectedIncident(null)} sx={{ color:FAINT, p:'2px' }}>
-                  <Close sx={{ fontSize:16 }} />
-                </IconButton>
-              </Box>
-
-              {/* AI result preview */}
-              {autoDispatchResult && (
-                <Box sx={{ mb:'9px', p:'10px 11px', borderRadius:'9px', background:'#F1F5F9', border:`1px solid #E2E8F0` }}>
-                  <Box sx={{ display:'flex', alignItems:'center', gap:'6px', mb:'7px' }}>
-                    <Box sx={{ width:10, height:10, borderRadius:'50%', border:`2px solid rgba(142,182,155,0.3)`, borderTopColor:G, animation:'spin360 0.7s linear infinite' }} />
-                    <Typography sx={{ fontSize:'11.5px', color:G, fontWeight:600 }}>AI deciding…</Typography>
-                  </Box>
-                  {autoDispatchResult.reasoning.map((line,i) => (
-                    <Box key={i} sx={{ display:'flex', alignItems:'flex-start', gap:'6px', mb:'3px' }}>
-                      <CheckCircle sx={{ fontSize:11, color:G, mt:'2px', flexShrink:0 }} />
-                      <Typography sx={{ fontSize:10.5, color:DIM, lineHeight:1.4 }}>{line}</Typography>
-                    </Box>
-                  ))}
-                  <Typography sx={{ fontSize:10, color:FAINT, mt:'6px' }}>Dispatching in 2 seconds…</Typography>
-                </Box>
-              )}
-
-              {/* Primary: AI Auto-Dispatch */}
-              {['PENDING','ACKNOWLEDGED'].includes(selectedIncident.status) && (
-                <Button
-                  fullWidth onClick={handleAutoDispatch} disabled={autoDispatchLoading}
-                  sx={{
-                    mb:'8px', py:'11px', borderRadius:'10px', border:'none',
-                    background: autoDispatchLoading ? 'rgba(142,182,155,0.3)' : G,
-                    color: BG, fontWeight:800, fontSize:'12.5px',
-                    '&:disabled': { opacity:0.6 },
-                    '&:hover': { background:'#7AA887' },
-                  }}
-                >
-                  {autoDispatchLoading
-                    ? <Box sx={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                        <Box sx={{ width:12, height:12, borderRadius:'50%', border:'2px solid #FFFFFF', borderTopColor:BG, animation:'spin360 0.7s linear infinite' }} />
-                        Analysing…
-                      </Box>
-                    : <>
-                        <AutoAwesome sx={{ fontSize:14, mr:'6px' }} />
-                        AI Auto-Dispatch
-                      </>
-                  }
-                </Button>
-              )}
-
-              {/* Secondary actions */}
-              <Box sx={{ display:'flex', gap:'8px', mb: '8px' }}>
-                {selectedIncident.status === 'PENDING' && (
-                  <Button onClick={handleAcknowledge} sx={{ flex:1, py:'8px', borderRadius:'9px', border:`1px solid ${BORDER2}`, color:DIM, fontSize:'11.5px', fontWeight:600, '&:hover':{ background:'rgba(142,182,155,0.06)' } }}>
-                    Acknowledge
-                  </Button>
-                )}
-                {['PENDING','ACKNOWLEDGED'].includes(selectedIncident.status) && (
-                  <Button onClick={() => setWizardOpen(true)} sx={{ flex:1, py:'8px', borderRadius:'9px', border:`1px solid ${BORDER2}`, color:DIM, fontSize:'11.5px', fontWeight:600, '&:hover':{ background:'rgba(142,182,155,0.06)' } }}>
-                    Assign Manually
-                  </Button>
-                )}
-              </Box>
-
-              {/* Status Transition Lifecycle Controls */}
-              {['DISPATCHED','EN_ROUTE','ON_SCENE','TRANSPORTING'].includes(selectedIncident.status) && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {selectedIncident.status === 'DISPATCHED' && (
-                    <Button
-                      fullWidth size="small" variant="contained"
-                      onClick={() => {
-                        setSelectedIncident(prev => ({ ...prev, status: 'EN_ROUTE' }));
-                        setSnackbar({ message: 'Ambulance marked En Route', severity: 'info' });
-                      }}
-                      sx={{ bgcolor: G, color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'none', borderRadius: '8px' }}
-                    >
-                      Mark Unit En Route →
-                    </Button>
-                  )}
-                  {selectedIncident.status === 'EN_ROUTE' && (
-                    <Button
-                      fullWidth size="small" variant="contained"
-                      onClick={() => {
-                        setSelectedIncident(prev => ({ ...prev, status: 'ON_SCENE' }));
-                        setSnackbar({ message: 'Ambulance arrived On Scene', severity: 'warning' });
-                      }}
-                      sx={{ bgcolor: '#8B5CF6', color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'none', borderRadius: '8px' }}
-                    >
-                      Mark Arrived On Scene →
-                    </Button>
-                  )}
-                  {selectedIncident.status === 'ON_SCENE' && (
-                    <Button
-                      fullWidth size="small" variant="contained"
-                      onClick={() => {
-                        setSelectedIncident(prev => ({ ...prev, status: 'TRANSPORTING' }));
-                        setSnackbar({ message: 'Patient in transit to ER', severity: 'error' });
-                      }}
-                      sx={{ bgcolor: RED, color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'none', borderRadius: '8px' }}
-                    >
-                      Depart Scene (In Transit to ER) →
-                    </Button>
-                  )}
-                  {selectedIncident.status === 'TRANSPORTING' && (
-                    <Button
-                      fullWidth size="small" variant="contained"
-                      onClick={() => {
-                        setSelectedIncident(prev => ({ ...prev, status: 'RESOLVED' }));
-                        setSnackbar({ message: 'Emergency Resolved. Hospital Handover Complete.', severity: 'success' });
-                      }}
-                      sx={{ bgcolor: '#10B981', color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'none', borderRadius: '8px' }}
-                    >
-                      Complete Handover & Resolve Incident ✓
-                    </Button>
-                  )}
-                  <Button
-                    fullWidth size="small" variant="outlined"
-                    onClick={() => setGreenCorridorOpen(true)}
-                    startIcon={<Traffic sx={{ fontSize: 14 }} />}
-                    sx={{ borderColor: RED, color: RED, fontSize: 11, fontWeight: 700, textTransform: 'none', borderRadius: '8px' }}
-                  >
-                    Activate Green Corridor Preemption
-                  </Button>
-                </Box>
-              )}
-            </Box>
-          )}
         </Box>
 
-        {/* ── Map area (flex column: stats row + map) ── */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', height: '100%' }}>
-
-          {/* ── Stats row — sits above the map in normal flow ── */}
-          <Box sx={{
-            display:'flex', gap:'8px', alignItems:'center',
-            px:'12px', py:'8px', flexShrink:0,
-            background: BG,
-            borderBottom: `1px solid ${BORDER}`,
-            overflow: 'hidden',
-          }}>
-            <StatsCards stats={stats} incidents={incidents} ambulances={ambulances} hospitals={hospitals} />
-          </Box>
-
-          {/* ── Map — fills all remaining height ── */}
-          <Box sx={{ flex: 1, position: 'relative', overflow: 'hidden', minWidth: 0, minHeight: 0 }}>
+        {/* ── Map + selected incident ── */}
+        <Box sx={{ display:'flex', flexDirection:'column', gap:'14px', minHeight:0, minWidth:0 }}>
+          <Box sx={{ flex:1, minHeight:{ xs:360, lg:0 }, position:'relative', overflow:'clip', border:`1px solid ${T.bd}`, background:T.sf2 }}>
             <DispatchMap
               incidents={incidents.filter(i=>!['RESOLVED','CANCELLED'].includes(i.status))}
-              ambulances={fleetAmbulances.length>0 ? fleetAmbulances : ambulances}
+              ambulances={fleet}
               hospitals={hospitals}
-              selectedIncident={selectedIncident}
+              selectedIncident={sel}
               activeAssignment={activeAssignment}
               focusAmbulance={focusAmbulance}
               onIncidentClick={handleIncidentSelect}
@@ -682,95 +401,99 @@ export default function DashboardPage({ user, onLogout }) {
               onHospitalClick={(h)=>console.log('Hospital:',h)}
             />
 
-            {/* Map legend — bottom left */}
-            <Box sx={{
-              position:'absolute', bottom:14, left:14, zIndex:1000,
-              display:'flex', gap:'12px',
-              background:'#FFFFFF',
-              px:'12px', py:'7px', borderRadius:'9px', border:`1px solid ${BORDER}`,
-            }}>
-              {[{color:RED,label:'Critical'},{color:'#E3A94F',label:'High'},{color:G,label:'Available'}].map(item=>(
-                <Box key={item.label} sx={{ display:'flex', alignItems:'center', gap:'5px', fontSize:11, color:DIM }}>
-                  <Box sx={{ width:7, height:7, borderRadius:'50%', background:item.color }} />
-                  {item.label}
+            <Box sx={{ position:'absolute', bottom:12, left:12, zIndex:1000, display:'flex', gap:'14px', flexWrap:'wrap', background:T.sf, px:'10px', py:'6px', border:`1px solid ${T.bd}`, fontSize:12, color:T.tx2 }}>
+              {[[T.g,'Standby','50%'],[T.ac,'En route','50%'],[T.r,'Incident','50%'],[T.tx,'Hospital','1px']].map(([c,l,r]) => (
+                <Box key={l} sx={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                  <Box sx={{ width:8, height:8, borderRadius:r, background:c }} />{l}
                 </Box>
               ))}
             </Box>
 
-            {/* Fleet slide-in panel */}
-            <Box sx={{
-              position: 'absolute', top:0, right:0, bottom:0, width:290,
-              background: '#FFFFFF',
-              borderLeft: `1px solid ${BORDER}`,
-              display:'flex', flexDirection:'column',
-              transform: fleetOpen ? 'translateX(0)' : 'translateX(100%)',
-              transition: 'transform 0.25s ease',
-              zIndex: 1000,
-            }}>
-              <LiveTrackingPanel
-                ambulances={ambulances}
-                onFleetUpdate={setFleetAmbulances}
-                onAmbulanceSelect={(amb) => setFocusAmbulance({...amb, _ts:Date.now()})}
-              />
+            <Box sx={overlaySx(panel === 'fleet', 290)}>
+              <LiveTrackingPanel ambulances={ambulances} onFleetUpdate={setFleetAmbulances}
+                onAmbulanceSelect={(amb) => setFocusAmbulance({...amb, _ts:Date.now()})} />
             </Box>
-
-            {/* Hospital status slide-in panel */}
-            <Box sx={{
-              position: 'absolute', top:0, right:0, bottom:0, width:290,
-              background: '#FFFFFF',
-              borderLeft: `1px solid ${BORDER}`,
-              display:'flex', flexDirection:'column',
-              transform: hospitalOpen ? 'translateX(0)' : 'translateX(100%)',
-              transition: 'transform 0.25s ease',
-              zIndex: 1000,
-            }}>
-              <HospitalStatusPanel />
-            </Box>
-
-            {/* Activity feed slide-in panel */}
-            <Box sx={{
-              position: 'absolute', top:0, right:0, bottom:0, width:310,
-              background: '#FFFFFF',
-              borderLeft: `1px solid ${BORDER}`,
-              display:'flex', flexDirection:'column',
-              transform: activityOpen ? 'translateX(0)' : 'translateX(100%)',
-              transition: 'transform 0.25s ease',
-              zIndex: 1000,
-            }}>
-              <ActivityFeed />
-            </Box>
-            {/* Incident Timeline slide-in panel */}
-            <Box sx={{
-              position: 'absolute', top:0, right:0, bottom:0, width:310,
-              background: '#FFFFFF',
-              borderLeft: `1px solid ${BORDER}`,
-              display:'flex', flexDirection:'column',
-              transform: timelineOpen && selectedIncident ? 'translateX(0)' : 'translateX(100%)',
-              transition: 'transform 0.25s ease',
-              zIndex: 1000,
-            }}>
-              <IncidentTimeline incident={selectedIncident} onClose={closeAll} />
-            </Box>
-
-            {/* Quick Comms slide-in panel */}
-            <Box sx={{
-              position: 'absolute', top:0, right:0, bottom:0, width:320,
-              background: '#FFFFFF',
-              borderLeft: `1px solid ${BORDER}`,
-              display:'flex', flexDirection:'column',
-              transform: commsOpen ? 'translateX(0)' : 'translateX(100%)',
-              transition: 'transform 0.25s ease',
-              zIndex: 1000,
-            }}>
-              <QuickCommsPanel ambulances={ambulances} />
+            <Box sx={overlaySx(panel === 'hospital', 290)}><HospitalStatusPanel /></Box>
+            <Box sx={overlaySx(panel === 'activity', 310)}><ActivityFeed /></Box>
+            <Box sx={overlaySx(panel === 'timeline' && !!sel, 310)}>
+              <IncidentTimeline incident={sel} onClose={closeAll} />
             </Box>
           </Box>
+
+          {/* Selected incident */}
+          <Box component="section" aria-label="Selected incident" sx={{ flexShrink:0, p:'16px 18px', background:T.sf, border:`1px solid ${T.bd}` }}>
+            {!sel ? (
+              <Typography sx={{ fontSize:13.5, color:T.tx3 }}>Select an incident to see details and dispatch a unit.</Typography>
+            ) : (
+              <Box sx={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                <Box sx={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                  <Typography sx={{ fontFamily:MONO, fontSize:12, color:T.tx3 }}>{sel.id}</Typography>
+                  <Box component="span" sx={tagSx(sel.severity)}>{sel.severity}</Box>
+                  <Box sx={{ flex:1 }} />
+                  <IconButton size="small" aria-label="Close incident" onClick={() => setSelectedIncident(null)} sx={{ color:T.tx3 }}>
+                    <Close sx={{ fontSize:18 }} />
+                  </IconButton>
+                </Box>
+                <Typography component="h2" sx={{ fontFamily:SERIF, fontSize:26, lineHeight:1.15, letterSpacing:'-0.01em' }}>
+                  {sel.incident_type}{sel.location_address ? ` · ${sel.location_address}` : ''}
+                </Typography>
+                {(sel.description || sel.caller_name || nearest) && (
+                  <Typography sx={{ fontSize:13.5, color:T.tx2, lineHeight:1.5 }}>
+                    {[sel.description, sel.caller_name && `Caller: ${sel.caller_name}${sel.caller_phone ? ` (${sel.caller_phone})` : ''}`,
+                      canDispatch && nearest && `Nearest unit: ${nearest.call_sign} (${hav(nearest.latitude, nearest.longitude, sel.location_lat, sel.location_lng).toFixed(1)} km)`]
+                      .filter(Boolean).join(' · ')}
+                  </Typography>
+                )}
+
+                {autoDispatchResult && (
+                  <Box role="status" sx={{ p:'10px 12px', background:T.sf2, display:'flex', flexDirection:'column', gap:'4px' }}>
+                    {autoDispatchResult.reasoning.map((line,i) => (
+                      <Box key={i} sx={{ display:'flex', gap:'6px', alignItems:'flex-start', fontSize:12.5, color:T.tx2 }}>
+                        <CheckCircle sx={{ fontSize:13, color:T.g, mt:'2px' }} />{line}
+                      </Box>
+                    ))}
+                    <Typography sx={{ fontFamily:MONO, fontSize:11, color:T.tx3 }}>DISPATCHING…</Typography>
+                  </Box>
+                )}
+
+                <Box sx={{ display:'flex', gap:'8px', flexWrap:'wrap', mt:'4px' }}>
+                  {canDispatch && (
+                    <Button onClick={handleAutoDispatch} disabled={autoDispatchLoading || !nearest} sx={btnSx(true)}>
+                      {autoDispatchLoading ? 'Analysing…' : nearest ? `Assign ${nearest.call_sign}` : 'No units available'}
+                    </Button>
+                  )}
+                  {canDispatch && <Button onClick={() => setWizardOpen(true)} sx={btnSx(false)}>Assign manually</Button>}
+                  {sel.status === 'PENDING' && <Button onClick={handleAcknowledge} sx={btnSx(false)}>Acknowledge</Button>}
+                  {next && (
+                    <Button sx={btnSx(true)} onClick={() => {
+                      setSelectedIncident(prev => ({ ...prev, status: next.to }));
+                      setSnackbar({ message: next.note[0], severity: next.note[1] });
+                    }}>
+                      {next.label}
+                    </Button>
+                  )}
+                  {next && (
+                    <Button onClick={() => setGreenCorridorOpen(true)} sx={{ ...btnSx(false), borderColor:T.r, color:T.rT }}>Green corridor</Button>
+                  )}
+                  <Button onClick={() => togglePanel('timeline')} sx={btnSx(false)}>
+                    {panel === 'timeline' ? 'Hide timeline' : 'Timeline'}
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </Box>
+
+        {/* ── Units + radio ── */}
+        <Box sx={{ display:'flex', flexDirection:'column', gap:'28px', minHeight:0, overflow:{ lg:'auto' } }}>
+          <UnitsPanel ambulances={fleet} onSelect={(amb) => setFocusAmbulance({ ...amb, _ts: Date.now() })} />
+          <QuickCommsPanel ambulances={fleet} />
         </Box>
       </Box>
 
       {/* ══ Modals ══ */}
       <SOSAlertModal open={sosModalOpen} onClose={()=>setSosModalOpen(false)} onSOSCreated={handleSOSCreated} />
-      <AssignmentWizard open={wizardOpen} onClose={()=>setWizardOpen(false)} incident={selectedIncident} onAssignmentCreated={handleAssignmentCreated} />
+      <AssignmentWizard open={wizardOpen} onClose={()=>setWizardOpen(false)} incident={sel} onAssignmentCreated={handleAssignmentCreated} />
       <ShiftReportModal open={shiftReportOpen} onClose={()=>setShiftReportOpen(false)} stats={stats} incidents={incidents} ambulances={ambulances} />
       <GreenCorridorModal open={greenCorridorOpen} onClose={()=>setGreenCorridorOpen(false)} assignment={activeAssignment} />
       <FleetRosterModal open={rosterOpen} onClose={() => setRosterOpen(false)} onRosterUpdated={refetchAmbulances} />
@@ -780,17 +503,14 @@ export default function DashboardPage({ user, onLogout }) {
         onAutoDispatch={handleAutoDispatch}
         onAcknowledge={handleAcknowledge}
         onActivateGreenCorridor={() => { setGreenCorridorOpen(true); setSnackbar({ message: 'Green Corridor activated via voice command', severity: 'info' }); }}
-        onFilterChange={(f) => { setTabValue(f === 'pending' ? 1 : 0); }}
+        onFilterChange={(f) => setFilter(f === 'pending' ? 'pending' : 'all')}
         incidents={incidents}
         ambulances={ambulances}
       />
 
-      {/* ══ Snackbar ══ */}
       <Snackbar open={!!snackbar} autoHideDuration={5000} onClose={()=>setSnackbar(null)} anchorOrigin={{vertical:'bottom',horizontal:'right'}}>
-        <Alert
-          severity={snackbar?.severity||'info'} onClose={()=>setSnackbar(null)}
-          sx={{ background:SURFACE, color:TEXT, border:`1px solid ${BORDER2}` }}
-        >
+        <Alert severity={snackbar?.severity||'info'} onClose={()=>setSnackbar(null)}
+          sx={{ background:T.sf, color:T.tx, border:`1px solid ${T.bd2}`, borderRadius:'3px' }}>
           {snackbar?.message}
         </Alert>
       </Snackbar>

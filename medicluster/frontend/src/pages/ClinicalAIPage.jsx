@@ -12,27 +12,26 @@ import {
   aiChat,
 } from "../api/apiClient";
 import { exportToPdf } from "../utils/exportPdf";
+import { Page, Section } from "../components/ui";
 
 // ── helper components ─────────────────────────────────────────────────────────
 
-function Card({ id, title, icon, children }) {
+function Card({ id, title, children }) {
   return (
-    <div id={id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 bg-slate-50">
-        <span className="text-lg">{icon}</span>
-        <h2 className="font-semibold text-slate-800 text-sm">{title}</h2>
-      </div>
-      <div className="p-5">{children}</div>
+    <div id={id}>
+      <Section title={title}>
+        <div className="pt-4">{children}</div>
+      </Section>
     </div>
   );
 }
 
 function Btn({ onClick, disabled, loading, children, variant = "primary", className = "" }) {
-  const base = "px-4 py-2 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  const base = "h-9 px-4 text-[13px] font-medium rounded-[3px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
   const variants = {
-    primary: "bg-blue-600 hover:bg-blue-700 text-white",
-    danger:  "bg-red-600 hover:bg-red-700 text-white",
-    ghost:   "bg-slate-100 hover:bg-slate-200 text-slate-700",
+    primary: "bg-ink hover:bg-slate-700 text-paper",
+    danger:  "bg-red-700 hover:bg-red-800 text-paper",
+    ghost:   "border border-line-strong hover:bg-sunken text-ink",
   };
   return (
     <button
@@ -48,11 +47,11 @@ function Btn({ onClick, disabled, loading, children, variant = "primary", classN
 function ErrBanner({ msg, onDismiss }) {
   if (!msg) return null;
   return (
-    <div className="flex items-start gap-2 mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
-      <span className="shrink-0 mt-0.5">⚠️</span>
+    <div className="flex items-start gap-2 mt-3 p-3 bg-surface border border-red-200 rounded-[3px] text-xs text-red-700">
+      <span className="shrink-0 mt-0.5"></span>
       <p className="flex-1">{msg}</p>
       {onDismiss && (
-        <button onClick={onDismiss} className="shrink-0 text-red-400 hover:text-red-600 font-bold">
+        <button onClick={onDismiss} className="shrink-0 text-red-400 hover:text-red-600 font-semibold">
           ✕
         </button>
       )}
@@ -62,11 +61,11 @@ function ErrBanner({ msg, onDismiss }) {
 
 function Skeleton({ rows = 3 }) {
   return (
-    <div className="space-y-2 mt-3 animate-pulse">
+    <div className="space-y-2 mt-3">
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="h-4 bg-slate-100 rounded-lg"
+          className="h-4 bg-slate-100 rounded-[3px]"
           style={{ width: `${65 + (i % 3) * 12}%` }}
         />
       ))}
@@ -81,14 +80,14 @@ function EmptyState({ children }) {
 function Pill({ children, tone = "slate" }) {
   const tones = {
     slate: "bg-slate-50 text-slate-700 border-slate-200",
-    blue: "bg-blue-50 text-blue-700 border-blue-200",
-    green: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    amber: "bg-amber-50 text-amber-700 border-amber-200",
-    red: "bg-red-50 text-red-700 border-red-200",
-    purple: "bg-purple-50 text-purple-700 border-purple-200",
+    blue: "bg-sunken text-blue-700 border-line-strong",
+    green: "bg-surface text-emerald-700 border-emerald-200",
+    amber: "bg-surface text-amber-700 border-amber-200",
+    red: "bg-surface text-red-700 border-red-200",
+    purple: "bg-sunken text-ink border-line-strong",
   };
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${tones[tone]}`}>
+    <span className={`inline-flex items-center rounded-sm border px-2.5 py-1 text-xs font-semibold ${tones[tone]}`}>
       {children}
     </span>
   );
@@ -96,11 +95,11 @@ function Pill({ children, tone = "slate" }) {
 
 function ProgressLine({ label, value, tone = "blue" }) {
   const color = {
-    blue: "bg-blue-500",
-    green: "bg-emerald-500",
-    amber: "bg-amber-500",
-    red: "bg-red-500",
-    purple: "bg-purple-500",
+    blue: "bg-ink",
+    green: "bg-risk-low",
+    amber: "bg-risk-moderate",
+    red: "bg-red-700",
+    purple: "bg-ink",
   }[tone];
   const pct = Math.max(0, Math.min(100, Number(value) || 0));
   return (
@@ -466,17 +465,11 @@ export default function ClinicalAIPage() {
   );
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 py-8 space-y-6">
-
-      {/* ── Header ────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-end gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">🧠 Clinical AI</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Intelligent clinical note analysis &amp; risk prediction
-          </p>
-        </div>
-        <div className="ml-auto flex flex-wrap items-end gap-3">
+    <Page
+      title="Clinical AI"
+      sub="Intelligent clinical note analysis & risk prediction."
+      actions={
+        <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs text-slate-500 mb-1">Patient ID</label>
             <input
@@ -486,7 +479,7 @@ export default function ClinicalAIPage() {
               onBlur={() => setCommittedPatientId(patientId)}
               onKeyDown={(e) => e.key === "Enter" && setCommittedPatientId(patientId)}
               placeholder="e.g. P-001"
-              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 w-28 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="h-9 px-3 border border-line-strong rounded-[3px] bg-surface text-[13px] focus:outline-none focus:border-ink w-28"
             />
           </div>
           <div>
@@ -495,7 +488,7 @@ export default function ClinicalAIPage() {
               value={selectedResultId}
               onChange={(e) => setSelectedResultId(e.target.value)}
               disabled={resultsLoading}
-              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="h-9 px-3 border border-line-strong rounded-[3px] bg-surface text-[13px] focus:outline-none focus:border-ink"
             >
               {resultsLoading && <option>Loading models…</option>}
               {!resultsLoading && clusterResults.length === 0 && (
@@ -510,18 +503,18 @@ export default function ClinicalAIPage() {
             </select>
           </div>
         </div>
-      </div>
-
+      }
+    >
       {/* ── Input Zone + Critical Alerts (two-column) ────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Input Zone */}
-        <Card icon="📝" title="Clinical Notes">
+        <Card title="Clinical Notes">
           <textarea
             rows={8}
             value={notes}
             onChange={(e) => handleNotesChange(e.target.value)}
             placeholder="Paste doctor notes, discharge summaries, or prescriptions here…"
-            className="w-full text-sm border border-slate-200 rounded-xl p-3 resize-y font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
+            className="w-full text-sm border border-slate-200 rounded-[3px] p-3 resize-y font-mono focus:outline-none focus:ring-2 focus:ring-ink/10"
           />
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs text-slate-400">{notes.length} chars</span>
@@ -535,7 +528,7 @@ export default function ClinicalAIPage() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
             onClick={() => fileInputRef.current?.click()}
-            className="mt-3 border-2 border-dashed border-slate-200 rounded-xl p-4 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+            className="mt-3 border-2 border-dashed border-slate-200 rounded-[3px] p-4 text-center cursor-pointer hover:border-line-strong hover:bg-sunken transition-colors"
           >
             <input
               ref={fileInputRef}
@@ -546,29 +539,29 @@ export default function ClinicalAIPage() {
             />
             {uploadStatus === "idle" && (
               <p className="text-xs text-slate-500">
-                📎 Drop or click to upload prescription / report image (JPEG, PNG, WebP)
+                Drop or click to upload prescription / report image (JPEG, PNG, WebP)
               </p>
             )}
             {uploadStatus === "uploading" && (
-              <p className="text-xs text-blue-600 animate-pulse">⏳ Extracting text from image…</p>
+              <p className="text-xs text-blue-600">Extracting text from image…</p>
             )}
             {uploadStatus === "done" && (
-              <p className="text-xs text-green-600">✅ Text extracted and added to notes</p>
+              <p className="text-xs text-green-600">Text extracted and added to notes</p>
             )}
             {uploadStatus === "error" && (
-              <p className="text-xs text-red-600">❌ {uploadError}</p>
+              <p className="text-xs text-red-600">{uploadError}</p>
             )}
           </div>
         </Card>
 
         {/* Critical Alerts */}
-        <Card icon="⚠️" title="Critical Alerts">
+        <Card title="Critical Alerts">
           {notes.length === 0 && (
             <p className="text-xs text-slate-400 italic">Start typing notes to scan for critical keywords…</p>
           )}
           {notes.length > 0 && alerts.length === 0 && emergencyFlags.length === 0 && (
-            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
-              <span>✅</span>
+            <div className="flex items-center gap-2 p-3 bg-surface border border-green-200 rounded-[3px]">
+              
               <p className="text-xs text-green-700 font-medium">No critical keywords detected</p>
             </div>
           )}
@@ -576,11 +569,11 @@ export default function ClinicalAIPage() {
             {alerts.map(({ kw, note }) => (
               <div
                 key={kw}
-                className="flex items-start gap-2 p-3 bg-red-50 border border-red-300 rounded-xl"
+                className="flex items-start gap-2 p-3 bg-surface border border-red-300 rounded-[3px]"
               >
-                <span className="text-red-500 shrink-0 mt-0.5">🚨</span>
+                <span className="text-red-500 shrink-0 mt-0.5"></span>
                 <div>
-                  <p className="text-xs font-bold text-red-700 uppercase tracking-wide">{kw}</p>
+                  <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">{kw}</p>
                   <p className="text-xs text-red-600 mt-0.5">{note}</p>
                 </div>
               </div>
@@ -588,11 +581,11 @@ export default function ClinicalAIPage() {
             {emergencyFlags.map((flag, i) => (
               <div
                 key={`${flag.flag ?? "flag"}-${i}`}
-                className="flex items-start gap-2 p-3 bg-red-50 border border-red-300 rounded-xl"
+                className="flex items-start gap-2 p-3 bg-surface border border-red-300 rounded-[3px]"
               >
-                <span className="text-red-500 shrink-0 mt-0.5">🚨</span>
+                <span className="text-red-500 shrink-0 mt-0.5"></span>
                 <div>
-                  <p className="text-xs font-bold text-red-700 uppercase tracking-wide">
+                  <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">
                     {flag.flag ?? "Emergency signal"}
                   </p>
                   <p className="text-xs text-red-600 mt-0.5">{flag.action ?? "Urgent review required"}</p>
@@ -605,11 +598,11 @@ export default function ClinicalAIPage() {
               {criticalEntities.map((e, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-300 rounded-xl"
+                  className="flex items-start gap-2 p-3 bg-surface border border-amber-300 rounded-[3px]"
                 >
-                  <span className="text-amber-500 shrink-0 mt-0.5">⚠️</span>
+                  <span className="text-amber-500 shrink-0 mt-0.5"></span>
                   <div>
-                    <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
                       {e.label ?? e.text}
                     </p>
                     <p className="text-xs text-amber-600 mt-0.5">
@@ -624,7 +617,7 @@ export default function ClinicalAIPage() {
       </div>
 
       {/* ── Clinical Summary ─────────────────────────────────────────── */}
-      <Card icon="📋" title="Clinical Summary">
+      <Card title="Clinical Summary">
         {notes.length < 30 && !nlpResult && (
           <p className="text-xs text-slate-400 italic">
             Enter at least 30 characters of notes to trigger NLP analysis…
@@ -658,7 +651,7 @@ export default function ClinicalAIPage() {
                         >
                           <td className="px-3 py-2 font-medium text-slate-800">{e.label ?? e.text}</td>
                           <td className="px-3 py-2">
-                            <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                            <span className="px-2 py-0.5 rounded-sm bg-sunken text-blue-700 border border-line-strong">
                               {e.type}
                             </span>
                           </td>
@@ -683,7 +676,7 @@ export default function ClinicalAIPage() {
                   {icdCodes.map((c, i) => (
                     <span
                       key={i}
-                      className="px-2 py-1 rounded-lg bg-purple-50 border border-purple-200 text-purple-700 text-xs font-mono"
+                      className="px-2 py-1 rounded-[3px] bg-sunken border border-line-strong text-ink text-xs font-mono"
                       title={c.description ?? ""}
                     >
                       {c.code ?? c} {c.description ? `— ${c.description}` : ""}
@@ -700,13 +693,7 @@ export default function ClinicalAIPage() {
                   Clinical Trajectory
                 </h3>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    nlpResult.trajectory === "worsening"
-                      ? "bg-red-100 text-red-700 border border-red-200"
-                      : nlpResult.trajectory === "improving"
-                      ? "bg-teal-100 text-teal-700 border border-teal-200"
-                      : "bg-green-100 text-green-700 border border-green-200"
-                  }`}
+                  className={`px-3 py-1 rounded-sm text-xs font-semibold ${ nlpResult.trajectory === "worsening" ? "bg-surface text-red-700 border border-red-200" : nlpResult.trajectory === "improving" ? "bg-sunken text-ink border border-line-strong" : "bg-surface text-green-700 border border-green-200" }`}
                 >
                   {nlpResult.trajectory.charAt(0).toUpperCase() + nlpResult.trajectory.slice(1)}
                 </span>
@@ -821,7 +808,7 @@ export default function ClinicalAIPage() {
                 <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
                   AI Summary
                 </h3>
-                <blockquote className="border-l-4 border-blue-300 pl-4 italic text-sm text-slate-700 bg-blue-50 py-3 pr-3 rounded-r-xl">
+                <blockquote className="border-l-4 border-line-strong pl-4 italic text-sm text-slate-700 bg-sunken py-3 pr-3 rounded-r-xl">
                   {nlpResult.summary}
                 </blockquote>
               </div>
@@ -834,7 +821,7 @@ export default function ClinicalAIPage() {
                     <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
                       Patient Explanation
                     </h3>
-                    <p className="text-sm text-slate-700 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                    <p className="text-sm text-slate-700 bg-surface border border-emerald-100 rounded-[3px] px-4 py-3">
                       {nlpResult.patient_friendly_explanation}
                     </p>
                   </div>
@@ -844,7 +831,7 @@ export default function ClinicalAIPage() {
                     <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
                       Referral Note
                     </h3>
-                    <p className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                    <p className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-[3px] px-4 py-3">
                       {nlpResult.referral_note}
                     </p>
                   </div>
@@ -859,15 +846,15 @@ export default function ClinicalAIPage() {
                   Drug Interaction Check
                 </h3>
                 {(drugInteractions.interactions ?? []).length === 0 ? (
-                  <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
-                    ✅ No known interactions detected between extracted medications.
+                  <p className="text-xs text-green-700 bg-surface border border-green-200 rounded-[3px] px-3 py-2">
+                    No known interactions detected between extracted medications.
                   </p>
                 ) : (
                   <div className="space-y-2">
                     {(drugInteractions.interactions ?? [drugInteractions]).map((d, i) => (
                       <div
                         key={i}
-                        className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800"
+                        className="p-3 bg-surface border border-amber-200 rounded-[3px] text-xs text-amber-800"
                       >
                         <p className="font-semibold">{d.drugs?.join(" + ") ?? d.pair}</p>
                         <p className="mt-0.5">{d.effect ?? d.description ?? d.detail}</p>
@@ -882,7 +869,7 @@ export default function ClinicalAIPage() {
       </Card>
 
       {/* ── Risk Prediction ──────────────────────────────────────────── */}
-      <Card icon="🎯" title="Risk Prediction">
+      <Card title="Risk Prediction">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
           {[
             { key: "age",            label: "Age",          unit: "yrs"  },
@@ -907,7 +894,7 @@ export default function ClinicalAIPage() {
                   setVitals((prev) => ({ ...prev, [key]: e.target.value }))
                 }
                 placeholder="—"
-                className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="w-full text-sm border border-slate-200 rounded-[3px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-ink/10"
               />
             </div>
           ))}
@@ -919,7 +906,7 @@ export default function ClinicalAIPage() {
             loading={predLoading}
             disabled={!selectedResultId || !hasVitals}
           >
-            🔮 Run Cluster Prediction
+            Run cluster prediction
           </Btn>
           <Btn
             variant="ghost"
@@ -927,7 +914,7 @@ export default function ClinicalAIPage() {
             loading={advancedRiskLoading}
             disabled={!hasVitals && notes.length < 10}
           >
-            🩺 Run Advanced Risk
+            Run advanced risk
           </Btn>
         </div>
         {!selectedResultId && (
@@ -945,7 +932,7 @@ export default function ClinicalAIPage() {
               <div>
                 <p className="text-xs text-slate-500 mb-1">Risk Tier</p>
                 <span
-                  className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wide ${riskBadgeClasses(predResult.risk_tier)}`}
+                  className={`px-4 py-1.5 rounded-sm text-sm font-semibold uppercase tracking-wide ${riskBadgeClasses(predResult.risk_tier)}`}
                 >
                   {predResult.risk_tier ?? "Unknown"}
                 </span>
@@ -957,7 +944,7 @@ export default function ClinicalAIPage() {
                   </p>
                   <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-700"
+                      className="h-full bg-ink rounded-full transition-all duration-700"
                       style={{ width: `${Math.round(predResult.confidence * 100)}%` }}
                     />
                   </div>
@@ -966,7 +953,7 @@ export default function ClinicalAIPage() {
               {predResult.cluster_id != null && (
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Cluster</p>
-                  <span className="text-sm font-mono text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">
+                  <span className="text-sm font-mono text-slate-700 bg-slate-100 px-2 py-1 rounded-[3px]">
                     #{predResult.cluster_id ?? predResult.cluster}
                   </span>
                 </div>
@@ -979,7 +966,7 @@ export default function ClinicalAIPage() {
                 <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
                   AI Cluster Insights
                 </p>
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                <div className="bg-slate-50 border border-slate-200 rounded-[3px] p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                   {predInsights}
                 </div>
               </div>
@@ -989,7 +976,7 @@ export default function ClinicalAIPage() {
       </Card>
 
       {/* ── Advanced Clinical Intelligence ───────────────────────────── */}
-      <Card icon="🧬" title="Advanced Clinical Intelligence">
+      <Card title="Advanced Clinical Intelligence">
         {advancedRiskLoading && <Skeleton rows={6} />}
         <ErrBanner msg={advancedRiskError} onDismiss={() => setAdvancedRiskError("")} />
 
@@ -1003,10 +990,10 @@ export default function ClinicalAIPage() {
               <div>
                 <p className="text-xs text-slate-500 mb-1">Overall Risk</p>
                 <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase ${riskBadgeClasses(advancedRisk.risk_tier)}`}>
+                  <span className={`px-3 py-1.5 rounded-sm text-xs font-semibold uppercase ${riskBadgeClasses(advancedRisk.risk_tier)}`}>
                     {advancedRisk.risk_tier}
                   </span>
-                  <span className="text-lg font-bold text-slate-900">
+                  <span className="text-lg font-semibold text-slate-900">
                     {advancedRisk.overall_risk_score}
                   </span>
                 </div>
@@ -1125,7 +1112,7 @@ export default function ClinicalAIPage() {
 
       {/* ── Care Plan ────────────────────────────────────────────────── */}
       {(carePlanLoading || carePlan) && (
-        <Card id="care-plan-panel" icon="💊" title="Personalized Care Plan">
+        <Card id="care-plan-panel" title="Personalized Care Plan">
           {carePlanLoading && <Skeleton rows={6} />}
           <ErrBanner msg={carePlanError} onDismiss={() => setCarePlanError("")} />
           {carePlan && !carePlanLoading && (
@@ -1172,7 +1159,7 @@ export default function ClinicalAIPage() {
                   <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
                     Care Plan
                   </h3>
-                  <pre className="text-xs bg-slate-50 border border-slate-200 rounded-xl p-4 overflow-auto max-h-64 text-slate-700 whitespace-pre-wrap leading-relaxed">
+                  <pre className="text-xs bg-slate-50 border border-slate-200 rounded-[3px] p-4 overflow-auto max-h-64 text-slate-700 whitespace-pre-wrap leading-relaxed">
                     {carePlan.rawPlan}
                   </pre>
                 </div>
@@ -1188,7 +1175,7 @@ export default function ClinicalAIPage() {
                   )
                 }
               >
-                📄 Download PDF
+                Download PDF
               </Btn>
             </div>
           )}
@@ -1196,7 +1183,7 @@ export default function ClinicalAIPage() {
       )}
 
       {/* ── Patient History Timeline ─────────────────────────────────── */}
-      <Card icon="📅" title="Patient History Timeline">
+      <Card title="Patient History Timeline">
         {historyLoading && <Skeleton rows={4} />}
         <ErrBanner msg={historyError} onDismiss={() => setHistoryError("")} />
 
@@ -1213,31 +1200,21 @@ export default function ClinicalAIPage() {
               <div key={entry.resultId ?? i} className="relative flex gap-4">
                 {/* dot */}
                 <div
-                  className={`absolute -left-4 mt-1 w-3 h-3 rounded-full border-2 border-white ${
-                    entry.risk_tier === "CRITICAL" ? "bg-red-600" :
-                    entry.risk_tier === "HIGH"     ? "bg-red-400" :
-                    entry.risk_tier === "MEDIUM"   ? "bg-amber-400" :
-                                                      "bg-green-400"
-                  }`}
+                  className={`absolute -left-4 mt-1 w-3 h-3 rounded-full border-2 border-white ${ entry.risk_tier === "CRITICAL" ? "bg-red-700" : entry.risk_tier === "HIGH" ? "bg-red-400" : entry.risk_tier === "MEDIUM" ? "bg-amber-400" : "bg-green-400" }`}
                 />
-                <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div className="flex-1 bg-slate-50 border border-slate-200 rounded-[3px] p-3">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     {i === 0 && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200 font-medium">
+                      <span className="text-xs px-2 py-0.5 rounded-sm bg-sunken text-blue-700 border border-line-strong font-medium">
                         Most Recent
                       </span>
                     )}
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                        entry.risk_tier === "CRITICAL" ? "bg-red-100 text-red-700" :
-                        entry.risk_tier === "HIGH"     ? "bg-red-50 text-red-600" :
-                        entry.risk_tier === "MEDIUM"   ? "bg-amber-50 text-amber-700" :
-                                                          "bg-green-50 text-green-700"
-                      }`}
+                      className={`text-xs px-2 py-0.5 rounded-sm font-semibold ${ entry.risk_tier === "CRITICAL" ? "bg-surface text-red-700" : entry.risk_tier === "HIGH" ? "bg-surface text-red-600" : entry.risk_tier === "MEDIUM" ? "bg-surface text-amber-700" : "bg-surface text-green-700" }`}
                     >
                       {entry.risk_tier ?? "Unknown"}
                     </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono">
+                    <span className="text-xs px-2 py-0.5 rounded-sm bg-slate-100 text-slate-600 font-mono">
                       {(entry.algorithm ?? "kmeans").toUpperCase()}
                     </span>
                   </div>
@@ -1256,6 +1233,6 @@ export default function ClinicalAIPage() {
         )}
       </Card>
 
-    </div>
+    </Page>
   );
 }

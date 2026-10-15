@@ -1,0 +1,31 @@
+/**
+ * backend/models/PatientProfile.js
+ * Patient-app profile: display name, care team, next visit and emergency contact.
+ */
+
+const mongoose = require("mongoose");
+
+const PatientProfileSchema = new mongoose.Schema(
+  {
+    patientId: { type: String, required: true, unique: true },
+    name:      { type: String, default: "" },
+    nextVisit: {
+      at:       { type: Date, default: null },
+      doctor:   { type: String, default: "" },
+      department: { type: String, default: "" },
+      location: { type: String, default: "" },
+      checklist: {
+        type: [{ label: String, done: { type: Boolean, default: false }, _id: false }],
+        default: [],
+      },
+    },
+    emergencyContact: {
+      name:     { type: String, default: "" },
+      relation: { type: String, default: "" },
+      phone:    { type: String, default: "" },
+    },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("PatientProfile", PatientProfileSchema);

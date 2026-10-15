@@ -3,15 +3,7 @@ import {
   ScatterChart, Scatter, XAxis, YAxis, ZAxis,
   CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-
-const RISK_COLORS = {
-  Low:      "#93c5fd",
-  Moderate: "#60a5fa",
-  High:     "#2563eb",
-  Critical: "#1e3a8a",
-  Noise:    "#94a3b8",
-  Unknown:  "#94a3b8",
-};
+import { RISK_COLORS } from "../theme";
 
 function CustomTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
@@ -22,7 +14,7 @@ function CustomTooltip({ active, payload }) {
   const top3 = features.slice(0, 3);
 
   return (
-    <div className="bg-white border border-blue-100 rounded-lg p-3 text-xs shadow-xl">
+    <div className="bg-white border border-line-strong rounded-[3px] p-3 text-xs">
       <p className="font-mono text-blue-700 mb-1">{d.patient_id}</p>
       <p className="mb-1">
         Risk:{" "}
@@ -82,22 +74,22 @@ export default function ClusterScatterPlot({ patients = [], featureNames = [], o
       ) : (
         <ResponsiveContainer width="100%" height="100%" minHeight={380}>
           <ScatterChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid stroke="#dbeafe" strokeDasharray="3 3" />
+            <CartesianGrid stroke="#dcd8cf" strokeDasharray="3 3" />
             <XAxis
               dataKey="x"
               type="number"
               name={xAxis}
-              tick={{ fill: "#64748b", fontSize: 11, fontFamily: "JetBrains Mono" }}
-              label={{ value: xAxis, fill: "#64748b", fontSize: 10, position: "insideBottom", offset: -2 }}
+              tick={{ fill: "#6c6e73", fontSize: 11, fontFamily: "IBM Plex Mono" }}
+              label={{ value: xAxis, fill: "#6c6e73", fontSize: 10, position: "insideBottom", offset: -2 }}
             />
             <YAxis
               dataKey="y"
               type="number"
               name={yAxis}
-              tick={{ fill: "#64748b", fontSize: 11, fontFamily: "JetBrains Mono" }}
+              tick={{ fill: "#6c6e73", fontSize: 11, fontFamily: "IBM Plex Mono" }}
             />
             <ZAxis range={[30, 30]} />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#2563eb22" }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#2447c922" }} />
             <Legend
               wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
               formatter={(val) => <span style={{ color: RISK_COLORS[val] }}>{val}</span>}
@@ -128,7 +120,7 @@ function AxisSelect({ label, value, options, onChange }) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="text-xs bg-white border border-blue-200 rounded px-2 py-1 text-slate-700 font-mono focus:outline-none focus:border-blue-500"
+        className="text-xs bg-white border border-line-strong rounded px-2 py-1 text-slate-700 font-mono focus:outline-none focus:border-ink"
       >
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>

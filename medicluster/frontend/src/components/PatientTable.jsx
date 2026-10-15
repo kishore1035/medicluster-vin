@@ -98,7 +98,7 @@ export default function PatientTable({ patients = [] }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-navy-700">
+      <div className="overflow-x-auto rounded-[3px] border border-navy-700">
         <table className="w-full text-xs text-left">
           <thead className="bg-navy-800 text-slate-500 uppercase tracking-wide">
             <tr>
@@ -146,7 +146,7 @@ export default function PatientTable({ patients = [] }) {
                       className="btn-secondary text-xs py-0.5 px-2"
                       title="Upload / view CT scans & documents"
                     >
-                      📎 Files
+                      Files
                     </button>
                   </td>
                 </tr>

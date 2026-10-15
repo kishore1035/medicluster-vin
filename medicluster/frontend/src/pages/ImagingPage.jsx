@@ -4,6 +4,7 @@ import {
   listModels, listPatientMedia, uploadPatientMedia, explainFindings, getGradCam,
 } from "../api/apiClient";
 import { exportToPdf } from "../utils/exportPdf";
+import { Page } from "../components/ui";
 
 const ACCEPT = "image/jpeg,image/png,image/gif,image/webp,.dcm,.dicom";
 
@@ -14,8 +15,8 @@ function formatBytes(bytes) {
 }
 
 const SEVERITY_STYLES = {
-  high:     { border: "border-red-300",    badge: "bg-red-100 text-red-700",     title: "text-red-700"     },
-  moderate: { border: "border-amber-300",  badge: "bg-amber-100 text-amber-700", title: "text-amber-700"   },
+  high:     { border: "border-red-300",    badge: "bg-surface text-red-700",     title: "text-red-700"     },
+  moderate: { border: "border-amber-300",  badge: "bg-surface text-amber-700", title: "text-amber-700"   },
   low:      { border: "border-slate-200",  badge: "bg-slate-100 text-slate-500", title: "text-slate-600"   },
 };
 
@@ -65,7 +66,7 @@ function DiseaseCard({ finding, allFindings, fileId, modelName, isFirst }) {
   };
 
   return (
-    <div className={`border rounded-lg overflow-hidden ${style.border}`}>
+    <div className={`border rounded-[3px] overflow-hidden ${style.border}`}>
       <button
         className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
         onClick={() => setExpanded((v) => !v)}
@@ -75,7 +76,7 @@ function DiseaseCard({ finding, allFindings, fileId, modelName, isFirst }) {
           <span className="text-xs text-slate-400 font-mono shrink-0">{pct}%</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.badge}`}>
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${style.badge}`}>
             {finding.severity?.toUpperCase()}
           </span>
           <svg
@@ -90,12 +91,12 @@ function DiseaseCard({ finding, allFindings, fileId, modelName, isFirst }) {
       {expanded && (
         <div className="px-3 pb-3 space-y-2 border-t border-slate-100">
           <div className="grid grid-cols-3 gap-2 pt-2">
-            <div className="bg-amber-50 rounded-md p-2">
-              <p className="text-xs font-bold text-amber-800 mb-1 uppercase tracking-wide">Cause</p>
+            <div className="bg-surface rounded-md p-2">
+              <p className="text-xs font-semibold text-amber-800 mb-1 uppercase tracking-wide">Cause</p>
               <p className="text-xs text-amber-900 leading-relaxed">{finding.cause || "—"}</p>
             </div>
-            <div className="bg-blue-50 rounded-md p-2">
-              <p className="text-xs font-bold text-blue-800 mb-1 uppercase tracking-wide">Medications</p>
+            <div className="bg-sunken rounded-md p-2">
+              <p className="text-xs font-semibold text-blue-800 mb-1 uppercase tracking-wide">Medications</p>
               {(finding.medications ?? []).length > 0 ? (
                 <ul className="space-y-0.5">
                   {finding.medications.map((m) => (
@@ -104,8 +105,8 @@ function DiseaseCard({ finding, allFindings, fileId, modelName, isFirst }) {
                 </ul>
               ) : <p className="text-xs text-blue-400">—</p>}
             </div>
-            <div className="bg-emerald-50 rounded-md p-2">
-              <p className="text-xs font-bold text-emerald-800 mb-1 uppercase tracking-wide">Prevention</p>
+            <div className="bg-surface rounded-md p-2">
+              <p className="text-xs font-semibold text-emerald-800 mb-1 uppercase tracking-wide">Prevention</p>
               {(finding.prevention ?? []).length > 0 ? (
                 <ul className="space-y-0.5">
                   {finding.prevention.map((p) => (
@@ -120,7 +121,7 @@ function DiseaseCard({ finding, allFindings, fileId, modelName, isFirst }) {
             <button
               onClick={handleAIExplain}
               disabled={loadingAI}
-              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md py-1.5 transition-colors disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-blue-700 bg-sunken hover:bg-sunken border border-line-strong rounded-md py-1.5 transition-colors disabled:opacity-60"
             >
               {loadingAI ? (
                 <><div className="spinner w-3 h-3" />Generating AI explanation…</>
@@ -141,7 +142,7 @@ function DiseaseCard({ finding, allFindings, fileId, modelName, isFirst }) {
           )}
 
           {explanation && (
-            <div className="bg-blue-50 border border-blue-100 rounded-md p-2.5">
+            <div className="bg-sunken border border-line-strong rounded-md p-2.5">
               <p className="text-xs font-semibold text-blue-800 mb-1 flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -158,7 +159,7 @@ function DiseaseCard({ finding, allFindings, fileId, modelName, isFirst }) {
             <button
               onClick={handleGradCam}
               disabled={loadingHeat}
-              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md py-1.5 transition-colors disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-700 bg-surface hover:bg-surface border border-emerald-200 rounded-md py-1.5 transition-colors disabled:opacity-60"
             >
               {loadingHeat ? (
                 <><div className="spinner w-3 h-3" />Generating heatmap…</>
@@ -208,7 +209,7 @@ function ImageCard({ img, onAnalyze, onDelete, onLightbox, analyzing, selectedMo
     <div className="panel flex flex-col sm:flex-row gap-4 fade-in">
       {/* Thumbnail */}
       <div
-        className="shrink-0 relative w-full sm:w-48 h-48 rounded-lg overflow-hidden bg-slate-900 cursor-zoom-in"
+        className="shrink-0 relative w-full sm:w-48 h-48 rounded-[3px] overflow-hidden bg-slate-900 cursor-zoom-in"
         onClick={() => !isDicom && onLightbox(img.gridfs_id)}
       >
         {isDicom ? (
@@ -227,13 +228,13 @@ function ImageCard({ img, onAnalyze, onDelete, onLightbox, analyzing, selectedMo
           />
         )}
         {img.analysis && (
-          <div className="absolute top-2 right-2 bg-green-500 text-white text-xs rounded px-1.5 py-0.5 font-semibold shadow">
+          <div className="absolute top-2 right-2 bg-risk-low text-paper text-xs rounded px-1.5 py-0.5 font-semibold">
             AI ✓
           </div>
         )}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
-          <p className="text-white text-xs truncate font-medium">{img.original_name}</p>
-          {img.size && <p className="text-white/60 text-xs">{formatBytes(img.size)}</p>}
+        <div className="absolute bottom-0 left-0 right-0 bg-sunken px-2 py-1.5">
+          <p className="text-paper text-xs truncate font-medium">{img.original_name}</p>
+          {img.size && <p className="text-paper/60 text-xs">{formatBytes(img.size)}</p>}
         </div>
       </div>
 
@@ -298,7 +299,7 @@ function ImageCard({ img, onAnalyze, onDelete, onLightbox, analyzing, selectedMo
             </div>
 
             {img.analysis.scan_warning && (
-              <div className="flex items-start gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
+              <div className="flex items-start gap-1.5 bg-surface border border-amber-200 rounded-md px-2.5 py-1.5">
                 <svg className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -330,7 +331,7 @@ function ImageCard({ img, onAnalyze, onDelete, onLightbox, analyzing, selectedMo
             )}
 
             <p className="text-xs text-slate-300 pt-1 border-t border-slate-100">
-              ⚠️ Educational purposes only — not a clinical diagnosis. Consult a qualified physician.
+              Educational purposes only — not a clinical diagnosis. Consult a qualified physician.
             </p>
           </div>
         )}
@@ -444,31 +445,16 @@ export default function ImagingPage() {
   }, [patientId]);
 
   return (
-    <div className="min-h-[calc(100vh-56px)] bg-slate-50 p-6">
-      <div className="max-w-4xl mx-auto space-y-5">
-
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Medical Imaging</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Upload chest X-rays or DICOM files. Choose a model and run AI pathology analysis per image.
-            </p>
-          </div>
-          {analyzedImages.length > 0 && (
-            <button
-              onClick={() => exportToPdf("imaging-results", "Imaging Analysis Report", "medicluster-imaging")}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-white border border-slate-200 rounded-lg transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export PDF
-            </button>
-          )}
-        </div>
-
+    <Page
+      title="Imaging"
+      sub="Upload chest X-rays or DICOM files. Choose a model and run AI pathology analysis per image."
+      actions={analyzedImages.length > 0 && (
+        <button type="button" className="btn-secondary h-9 text-sm"
+          onClick={() => exportToPdf("imaging-results", "Imaging Analysis Report", "medicluster-imaging")}>
+          Export PDF
+        </button>
+      )}
+    >
         {/* Controls row */}
         <div className="panel flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 flex-1 min-w-[180px]">
@@ -509,7 +495,7 @@ export default function ImagingPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-4 py-2.5 rounded-lg flex items-center justify-between">
+          <div className="bg-surface border border-red-200 text-red-700 text-xs px-4 py-2.5 rounded-[3px] flex items-center justify-between">
             <span>{error}</span>
             <button onClick={() => setError(null)} className="hover:text-red-900 ml-4">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -525,9 +511,7 @@ export default function ImagingPage() {
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-            dragOver ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"
-          }`}
+          className={`border-2 border-dashed rounded-[3px] p-8 text-center cursor-pointer transition-all ${ dragOver ? "border-ink bg-sunken" : "border-slate-200 hover:border-line-strong hover:bg-slate-50" }`}
         >
           <input ref={inputRef} type="file" accept={ACCEPT} multiple className="hidden"
             onChange={(e) => handleFiles(e.target.files)} />
@@ -574,7 +558,7 @@ export default function ImagingPage() {
                           <span className="text-slate-400 font-mono">{pct}%</span>
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-1">
-                          <div className={`h-1 rounded-full ${isElevated ? "bg-red-500" : "bg-slate-300"}`}
+                          <div className={`h-1 rounded-full ${isElevated ? "bg-red-700" : "bg-slate-300"}`}
                             style={{ width: `${barWidth}%` }} />
                         </div>
                       </div>
@@ -590,7 +574,7 @@ export default function ImagingPage() {
                 ].map(({ label, count, color }) => (
                   <div key={label} className="flex items-center justify-between text-xs">
                     <span className="text-slate-500">{label}</span>
-                    <span className={`font-mono font-bold ${color}`}>{count}</span>
+                    <span className={`font-mono font-semibold ${color}`}>{count}</span>
                   </div>
                 ))}
                 <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
@@ -605,7 +589,7 @@ export default function ImagingPage() {
         {/* Image cards */}
         {images.length > 0 && (
           <div id="imaging-results" className="space-y-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
               {images.length} File{images.length !== 1 ? "s" : ""}
             </p>
             {images.map((img) => (
@@ -621,7 +605,6 @@ export default function ImagingPage() {
             ))}
           </div>
         )}
-      </div>
 
       {/* Lightbox */}
       {lightbox && (
@@ -630,17 +613,17 @@ export default function ImagingPage() {
           <img
             src={getMediaFileUrl(lightbox)}
             alt="Full size"
-            className="max-w-full max-h-full object-contain rounded shadow-2xl"
+            className="max-w-full max-h-full object-contain rounded"
             onClick={(e) => e.stopPropagation()}
           />
           <button onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors">
+            className="absolute top-4 right-4 text-paper/60 hover:text-paper transition-colors">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
       )}
-    </div>
+    </Page>
   );
 }

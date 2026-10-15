@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Section } from "./ui";
 import { getOptimalK } from "../api/apiClient";
 
 const ALGORITHMS = [
@@ -6,7 +7,7 @@ const ALGORITHMS = [
   { id: "dbscan",       label: "DBSCAN" },
   { id: "hierarchical", label: "Hierarchical" },
   { id: "gmm",          label: "GMM" },
-  { id: "all",          label: "All" },
+  { id: "all",          label: "Compare all" },
 ];
 
 const DEFAULT_PARAMS = {
@@ -61,32 +62,25 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
   const showRecommendBtn = (selected === "kmeans" || selected === "gmm" || selected === "hierarchical") && !disabled;
 
   return (
-    <div className="panel space-y-3">
-      <p className="section-label">Algorithm</p>
-
-      {/* Algorithm tabs */}
-      <div className="flex flex-wrap gap-1">
-        {ALGORITHMS.map((algo) => (
-          <button
-            key={algo.id}
-            onClick={() => setSelected(algo.id)}
-            className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
-              selected === algo.id
-                ? "bg-blue-600 text-white"
-                : "bg-blue-50 text-slate-600 hover:text-blue-700"
-            }`}
-          >
-            {algo.label}
-          </button>
-        ))}
+    <Section title="Algorithm">
+      <div role="radiogroup" aria-label="Algorithm" className="flex flex-col pt-1">
+        {ALGORITHMS.map((algo) => {
+          const on = selected === algo.id;
+          return (
+            <button key={algo.id} type="button" role="radio" aria-checked={on} onClick={() => setSelected(algo.id)}
+              className={`flex justify-between items-center py-2 border-b border-line text-[13px] text-left ${on ? "text-ink font-medium" : "text-slate-600 hover:text-ink"}`}>
+              {algo.label}<span aria-hidden="true">{on ? "●" : ""}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Dynamic parameter controls */}
-      <div className="space-y-3 text-sm">
+      <div className="flex flex-col gap-4 pt-4 text-sm">
         {selected === "kmeans" && (
           <>
             <SliderField
-              label={`K (clusters): ${params.kmeans.k}`}
+              label="K (clusters)"
               min={2} max={8} step={1}
               value={params.kmeans.k}
               onChange={(v) => set("k", +v)}
@@ -103,13 +97,13 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
         {selected === "dbscan" && (
           <>
             <SliderField
-              label={`Epsilon: ${params.dbscan.eps}`}
+              label="Epsilon"
               min={0.1} max={2.0} step={0.1}
               value={params.dbscan.eps}
               onChange={(v) => set("eps", +v)}
             />
             <SliderField
-              label={`Min Samples: ${params.dbscan.min_samples}`}
+              label="Min Samples"
               min={2} max={20} step={1}
               value={params.dbscan.min_samples}
               onChange={(v) => set("min_samples", +v)}
@@ -120,7 +114,7 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
         {selected === "hierarchical" && (
           <>
             <SliderField
-              label={`Clusters: ${params.hierarchical.n_clusters}`}
+              label="Clusters"
               min={2} max={8} step={1}
               value={params.hierarchical.n_clusters}
               onChange={(v) => set("n_clusters", +v)}
@@ -137,7 +131,7 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
         {selected === "gmm" && (
           <>
             <SliderField
-              label={`Components: ${params.gmm.n_components}`}
+              label="Components"
               min={2} max={8} step={1}
               value={params.gmm.n_components}
               onChange={(v) => set("n_components", +v)}
@@ -164,7 +158,7 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
           <button
             onClick={handleRecommendK}
             disabled={recLoading}
-            className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-violet-300 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors disabled:opacity-50"
+            className="btn-secondary w-full text-[13px] h-9 mt-3"
           >
             {recLoading ? (
               <><div className="spinner w-3 h-3" />Finding best K…</>
@@ -178,15 +172,15 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
             )}
           </button>
           {recResult && (
-            <div className="bg-violet-50 border border-violet-200 rounded-lg px-2.5 py-2 text-xs space-y-1">
-              <p className="font-semibold text-violet-800">
-                Recommended K = <span className="text-violet-600 text-sm">{recResult.best_k ?? recResult.optimal_k}</span>
-                <span className="text-violet-400 font-normal ml-1">(auto-applied)</span>
+            <div className="mt-2 py-2 border-b border-line text-xs space-y-1.5">
+              <p>
+                Recommended K = <span className="font-mono">{recResult.best_k ?? recResult.optimal_k}</span>
+                <span className="text-slate-500 ml-1">(applied)</span>
               </p>
               {recResult.scores && (
                 <div className="flex gap-2 flex-wrap">
                   {Object.entries(recResult.scores).slice(0, 4).map(([k, v]) => (
-                    <span key={k} className={`px-1.5 py-0.5 rounded font-mono ${String(k) === String(recResult.best_k ?? recResult.optimal_k) ? "bg-violet-600 text-white" : "bg-white text-slate-500 border border-slate-200"}`}>
+                    <span key={k} className={`px-1.5 py-0.5 rounded font-mono ${String(k) === String(recResult.best_k ?? recResult.optimal_k) ? "bg-ink text-paper" : "text-slate-600 border border-line"}`}>
                       K={k}: {typeof v === "number" ? v.toFixed(3) : v}
                     </span>
                   ))}
@@ -199,9 +193,10 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
 
       {/* Run button */}
       <button
+        type="button"
         onClick={handleRun}
         disabled={disabled || loading}
-        className="btn-primary w-full"
+        className="btn-primary w-full h-10 mt-5"
       >
         {loading ? (
           <>
@@ -209,15 +204,10 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
             <span>Clustering…</span>
           </>
         ) : (
-          <>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
-            </svg>
-            Run Clustering
-          </>
+          "Run clustering"
         )}
       </button>
-    </div>
+    </Section>
   );
 }
 
@@ -225,35 +215,25 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
 
 function SliderField({ label, min, max, step, value, onChange }) {
   return (
-    <div>
-      <p className="text-xs text-slate-400 mb-1 font-mono">{label}</p>
-      <input
-        type="range"
-        min={min} max={max} step={step}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full accent-blue-600 cursor-pointer"
-      />
-      <div className="flex justify-between text-xs text-slate-600">
-        <span>{min}</span><span>{max}</span>
-      </div>
-    </div>
+    <label className="flex flex-col gap-1.5">
+      <span className="flex justify-between text-xs text-slate-600">
+        {label}<span className="font-mono text-ink">{value}</span>
+      </span>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(e.target.value)} className="w-full accent-ink cursor-pointer" />
+      <span className="flex justify-between font-mono text-[11px] text-slate-500"><span>{min}</span><span>{max}</span></span>
+    </label>
   );
 }
 
 function SelectField({ label, options, value, onChange }) {
   return (
-    <div>
-      <label className="text-xs text-slate-400 mb-1 block">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="input-field"
-      >
-        {options.map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
+    <label className="flex justify-between items-center gap-3 text-xs text-slate-600">
+      {label}
+      <select value={value} onChange={(e) => onChange(e.target.value)}
+        className="bg-transparent font-mono text-[12px] text-ink border-0 border-b border-line-strong py-1 focus:outline-none focus:border-ink">
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
-    </div>
+    </label>
   );
 }
