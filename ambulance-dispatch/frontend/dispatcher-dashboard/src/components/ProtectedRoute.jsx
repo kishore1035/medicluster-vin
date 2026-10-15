@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
-export default function ProtectedRoute({ children, allowedRoles }) {
+export default function ProtectedRoute({ children, allowedRoles, loginPath = '/login' }) {
   const { user, profile, loading, isAuthenticated } = useAuth();
   const location = useLocation();
 
@@ -30,7 +30,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
   // 2. Unauthenticated -> Redirect to Login
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to={loginPath} state={{ from: location }} replace />;
   }
 
   // 3. Role-Based Access Enforcement

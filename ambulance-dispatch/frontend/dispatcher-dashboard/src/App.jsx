@@ -5,7 +5,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
-import DriverInterface from './pages/DriverInterface';
+import DriverApp from './pages/DriverApp';
+import DriverLoginPage from './pages/DriverLoginPage';
 import InsightsPage from './pages/InsightsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import MobileFleetPage from './pages/MobileFleetPage';
@@ -60,11 +61,12 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
 
             {/* Protected Driver View */}
+            <Route path="/driver/login" element={<DriverLoginPage />} />
             <Route
               path="/driver"
               element={
-                <ProtectedRoute allowedRoles={['DRIVER', 'DISPATCHER', 'ADMIN']}>
-                  <DriverInterface />
+                <ProtectedRoute allowedRoles={['DRIVER', 'DISPATCHER', 'ADMIN']} loginPath="/driver/login">
+                  <DriverApp />
                 </ProtectedRoute>
               }
             />
