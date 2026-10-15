@@ -7,7 +7,15 @@ const express = require("express");
 const PatientProfile = require("../models/PatientProfile");
 const Reading = require("../models/Reading");
 
+const { requirePatientOrClinician, canAccessPatient } = require("../middleware/auth");
+const { normalizeMobile } = require("./patientAuthRoutes");
+
 const router = express.Router();
+
+// Every route here is per patient: clinicians may read any record, patients only their own.
+router.use(requirePatientOrClinician);
+router.use("/:patientId", (req, res, next) =>
+  canAccessPatient(req, req.params.patientId) ? next() : res.status(403).json({ error: "Not your record" }));
 
 // ── GET /api/patient-app/:patientId/profile ───────────────────────────────
 router.get("/:patientId/profile", async (req, res, next) => {
@@ -26,14 +34,25 @@ router.put("/:patientId/profile", async (req, res, next) => {
   if (typeof name === "string") update.name = name.trim();
   if (nextVisit && typeof nextVisit === "object") update.nextVisit = nextVisit;
   if (emergencyContact && typeof emergencyContact === "object") update.emergencyContact = emergencyContact;
+  // Only clinicians link the sign-in number ("" unlinks it).
+  const ops = { $set: update };
+  if (req.body.mobile !== undefined && req.session.kind === "clinician") {
+    if (req.body.mobile === "") ops.$unset = { mobile: 1 };
+    else {
+      const mobile = normalizeMobile(req.body.mobile);
+      if (!mobile) return res.status(400).json({ error: "Enter a 10-digit Indian mobile number" });
+      update.mobile = mobile;
+    }
+  }
   try {
     const profile = await PatientProfile.findOneAndUpdate(
       { patientId: req.params.patientId },
-      { $set: update },
+      ops,
       { new: true, upsert: true, runValidators: true }
     ).lean();
     return res.json(profile);
   } catch (err) {
+    if (err.code === 11000) return res.status(409).json({ error: "That number is already linked to another patient" });
     return next(err);
   }
 });

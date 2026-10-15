@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
 import {
   listReminders, markDoseTaken, getPatientProfile, updatePatientProfile, listReadings,
+  getPatientToken, setPatientToken,
 } from "../api/apiClient";
 import { dateKey, slotsOn, toMinutes, nowMinutes } from "../data/schedule";
 import TodayScreen from "./screens/TodayScreen";
@@ -12,6 +13,7 @@ import VisitsScreen from "./screens/VisitsScreen";
 import EmergencyScreen from "./screens/EmergencyScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import ReminderAlert from "./ReminderAlert";
+import LoginScreen from "./screens/LoginScreen";
 
 const PatientContext = createContext(null);
 export const usePatient = () => useContext(PatientContext);
@@ -55,7 +57,8 @@ function apiError(err) {
 }
 
 export default function PatientApp() {
-  const [patientId, setPatientIdState] = useState(() => readStorage(PATIENT_KEY, ""));
+  // Signed in = a patient token plus the patient it belongs to.
+  const [patientId, setPatientIdState] = useState(() => (getPatientToken() ? readStorage(PATIENT_KEY, "") : ""));
   const [profile, setProfile] = useState(null);
   const [reminders, setReminders] = useState([]);
   const [readings, setReadings] = useState([]);
@@ -64,10 +67,24 @@ export default function PatientApp() {
   const [snoozes, setSnoozes] = useState(() => readStorage(SNOOZE_KEY, {}));
   const now = useNow();
 
+  // Setting "" signs the patient out.
   const setPatientId = useCallback((id) => {
+    if (!id) setPatientToken(null);
     writeStorage(PATIENT_KEY, id);
     setPatientIdState(id);
   }, []);
+
+  const signIn = useCallback(({ token, patientId: id }) => {
+    setPatientToken(token);
+    writeStorage(PATIENT_KEY, id);
+    setPatientIdState(id);
+  }, []);
+
+  useEffect(() => {
+    const onSignedOut = () => setPatientId("");
+    window.addEventListener("medicluster:patient-signed-out", onSignedOut);
+    return () => window.removeEventListener("medicluster:patient-signed-out", onSignedOut);
+  }, [setPatientId]);
 
   const refreshReminders = useCallback(async () => {
     if (!patientId) return;
@@ -137,7 +154,7 @@ export default function PatientApp() {
   return (
     <PatientContext.Provider value={value}>
       <PhoneFrame>
-        {patientId ? <AppRoutes /> : <ProfileScreen setup />}
+        {patientId ? <AppRoutes /> : <LoginScreen onSignedIn={signIn} />}
         {patientId && <DoseAlerts />}
       </PhoneFrame>
     </PatientContext.Provider>

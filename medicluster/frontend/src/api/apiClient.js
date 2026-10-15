@@ -7,33 +7,59 @@ const api = axios.create({
 });
 
 // ── Session ──────────────────────────────────────────────────────────────────
+// Clinicians (web app) and patients (mobile app under /app) keep separate sessions,
+// so signing in on one never signs out or impersonates the other.
 const TOKEN_KEY = "medicluster.token";
+const PATIENT_TOKEN_KEY = "medicluster.patientToken";
+const inPatientApp = () => window.location.pathname === "/app" || window.location.pathname.startsWith("/app/");
 
-export function getToken() {
-  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+function readKey(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
 }
 
-export function setToken(token) {
+function writeKey(key, token) {
   try {
-    if (token) localStorage.setItem(TOKEN_KEY, token);
-    else localStorage.removeItem(TOKEN_KEY);
+    if (token) localStorage.setItem(key, token);
+    else localStorage.removeItem(key);
   } catch { /* storage unavailable: session lasts for this page load only */ }
 }
 
+export const getToken = () => readKey(TOKEN_KEY);
+export const setToken = (token) => writeKey(TOKEN_KEY, token);
+export const getPatientToken = () => readKey(PATIENT_TOKEN_KEY);
+export const setPatientToken = (token) => writeKey(PATIENT_TOKEN_KEY, token);
+
 api.interceptors.request.use((config) => {
-  const token = getToken();
+  const token = inPatientApp() ? getPatientToken() : getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// A 401 means the token is missing, expired or revoked; the auth context listens and signs out.
+// A 401 means the token is missing, expired or revoked; the matching session listens and signs out.
 api.interceptors.response.use(undefined, (err) => {
-  if (err?.response?.status === 401 && getToken()) {
-    setToken(null);
-    window.dispatchEvent(new Event("medicluster:signed-out"));
+  if (err?.response?.status === 401) {
+    if (inPatientApp() && getPatientToken()) {
+      setPatientToken(null);
+      window.dispatchEvent(new Event("medicluster:patient-signed-out"));
+    } else if (!inPatientApp() && getToken()) {
+      setToken(null);
+      window.dispatchEvent(new Event("medicluster:signed-out"));
+    }
   }
   return Promise.reject(err);
 });
+
+/** Patient sign-in, step 1: text a one-time code to a linked mobile number. */
+export async function requestPatientCode(mobile) {
+  const res = await api.post("/patient-auth/request-code", { mobile });
+  return res.data;
+}
+
+/** Patient sign-in, step 2 → { token, patientId, name } */
+export async function verifyPatientCode(mobile, code) {
+  const res = await api.post("/patient-auth/verify", { mobile, code });
+  return res.data;
+}
 
 export async function login(email, password) {
   const res = await api.post("/auth/login", { email, password });

@@ -38,11 +38,10 @@ function formFromProfile(profile) {
   };
 }
 
-/** Setup (choose patient ID) or edit profile, visit and emergency contact. */
-export default function ProfileScreen({ setup = false }) {
+/** Edit profile, visit and emergency contact. */
+export default function ProfileScreen() {
   const { patientId, setPatientId, profile, saveProfile, apiError } = usePatient();
   const navigate = useNavigate();
-  const [idInput, setIdInput] = useState(patientId);
   const [form, setForm] = useState(() => formFromProfile(profile));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -50,30 +49,6 @@ export default function ProfileScreen({ setup = false }) {
   useEffect(() => setForm(formFromProfile(profile)), [profile]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
-
-  if (setup) {
-    const start = (e) => {
-      e.preventDefault();
-      if (idInput.trim()) setPatientId(idInput.trim());
-    };
-    return (
-      <Body className="px-[22px] pt-16 pb-6 flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <span className="font-mono text-[11px] tracking-[0.08em] text-slate-500">MEDICLUSTER</span>
-          <h1 className="m-0 font-serif text-[34px] leading-[1.1]">Your medicines, readings and care team in one place.</h1>
-        </div>
-        <form onSubmit={start} className="flex flex-col gap-4">
-          <Field label="Patient ID (on your hospital card)">
-            <input value={idInput} onChange={(e) => setIdInput(e.target.value)} placeholder="e.g. P072" className={field} autoFocus />
-          </Field>
-          <button disabled={!idInput.trim()} className="h-12 rounded bg-ink text-paper text-[15px] font-medium disabled:opacity-40">
-            Continue
-          </button>
-        </form>
-        <Link to="/" className="mt-auto text-[13px] text-blue-600">Clinician? Open MediCluster</Link>
-      </Body>
-    );
-  }
 
   const save = async (e) => {
     e.preventDefault();
@@ -104,7 +79,7 @@ export default function ProfileScreen({ setup = false }) {
     }
   };
 
-  const switchPatient = () => {
+  const signOut = () => {
     setPatientId("");
     navigate("/app");
   };
@@ -142,7 +117,7 @@ export default function ProfileScreen({ setup = false }) {
             {saving ? "Saving…" : "Save"}
           </button>
           <div className="flex justify-between text-[13px]">
-            <button type="button" onClick={switchPatient} className="text-blue-600">Switch patient</button>
+            <button type="button" onClick={signOut} className="text-blue-600">Sign out</button>
             <Link to="/" className="text-blue-600">Clinician app</Link>
           </div>
         </form>

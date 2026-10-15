@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getMediaFileUrl, getPatientClusterHistory, listPatientMedia, listReminders } from "../api/apiClient";
+import { getMediaFileUrl, getPatientClusterHistory, getPatientProfile, listPatientMedia, listReminders, updatePatientProfile } from "../api/apiClient";
 import {
   TIER_RANK, VITALS, adherence7d, flagReason, fmtVital, loadLatestRuns, runId, shortDate, vitalStatus,
 } from "../data/clinical";
@@ -183,6 +183,47 @@ function Medications({ reminders, patientId }) {
   );
 }
 
+// Links the mobile number the patient signs in to the patient app with.
+function AppSignIn({ patientId }) {
+  const [saved, setSaved] = useState("");
+  const [value, setValue] = useState("");
+  const [state, setState] = useState({ busy: false, error: "", ok: false });
+
+  useEffect(() => {
+    let alive = true;
+    getPatientProfile(patientId).then((p) => { if (alive) { setSaved(p?.mobile || ""); setValue(p?.mobile || ""); } }).catch(() => {});
+    return () => { alive = false; };
+  }, [patientId]);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setState({ busy: true, error: "", ok: false });
+    try {
+      const p = await updatePatientProfile(patientId, { mobile: value.trim() });
+      setSaved(p.mobile || "");
+      setValue(p.mobile || "");
+      setState({ busy: false, error: "", ok: true });
+    } catch (err) {
+      setState({ busy: false, error: err?.response?.data?.error || "Couldn’t save the number.", ok: false });
+    }
+  };
+
+  return (
+    <form onSubmit={save} className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px]">
+      <label htmlFor="app-mobile" className="text-slate-600">Patient app sign-in</label>
+      <span className="font-mono text-slate-500">+91</span>
+      <input id="app-mobile" value={value} onChange={(e) => { setValue(e.target.value); setState((s) => ({ ...s, ok: false })); }}
+        inputMode="tel" placeholder="Mobile number"
+        className="h-8 w-36 bg-transparent border-b border-line-strong font-mono focus:outline-none focus:border-ink" />
+      <button type="submit" disabled={state.busy || value.trim() === saved} className={`${linkCls} disabled:opacity-40 disabled:no-underline`}>
+        {state.busy ? "Saving…" : saved && !value.trim() ? "Unlink" : "Save"}
+      </button>
+      {state.ok && <span className="text-green-700">{saved ? "Linked" : "Unlinked"}</span>}
+      {state.error && <span role="alert" className="text-red-700">{state.error}</span>}
+    </form>
+  );
+}
+
 function summarize(history, patient) {
   const tiers = [...history].reverse().map((h) => h.risk_tier).filter((t) => TIER_RANK[t]);
   const drivers = patient ? flagReason(patient, "") : "";
@@ -241,10 +282,13 @@ function Profile({ patientId, patient }) {
 
       {summary && <p className="font-serif text-[22px] leading-snug max-w-[640px]">{summary}</p>}
 
-      <div className="flex gap-5 flex-wrap text-[13px] pb-6 border-b border-line">
-        <Link to="/predict" className={linkCls}>Re-run prediction</Link>
-        <Link to={`/reminders/${pid}`} className={linkCls}>Medication reminders</Link>
-        <Link to="/imaging" className={linkCls}>Imaging</Link>
+      <div className="flex flex-col gap-4 pb-6 border-b border-line">
+        <div className="flex gap-5 flex-wrap text-[13px]">
+          <Link to="/predict" className={linkCls}>Re-run prediction</Link>
+          <Link to={`/reminders/${pid}`} className={linkCls}>Medication reminders</Link>
+          <Link to="/imaging" className={linkCls}>Imaging</Link>
+        </div>
+        <AppSignIn patientId={patientId} />
       </div>
 
       {patient ? <VitalsTable patient={patient} /> : (
