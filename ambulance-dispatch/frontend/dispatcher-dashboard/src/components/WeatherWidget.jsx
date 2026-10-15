@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Tooltip } from '@mui/material';
+import { T, MONO } from '../theme/tokens';
 
 const G     = '#2563EB';
 const TEXT  = '#0F172A';
@@ -43,21 +44,14 @@ export default function WeatherWidget({ compact = false }) {
 
   if (compact) {
     return (
-      <Tooltip title={`${w.desc} · ${w.temp}°C · 💨${w.wind}km/h · 👁${w.visibility}km${w.alert ? ' · ⚠ '+w.alert : ''}`} placement="bottom">
+      <Tooltip title={`${w.desc} · ${w.temp}°C · wind ${w.wind} km/h · visibility ${w.visibility} km${w.alert ? ` · ${w.alert}` : ''}`} placement="bottom">
         <Box sx={{
-          display:'flex', alignItems:'center', gap:'6px',
-          px:'8px', py:'4px', borderRadius:'8px',
-          background:'rgba(142,182,155,0.06)',
-          border:`1px solid ${BRD}`,
-          cursor:'default', flexShrink:0,
+          display:'flex', alignItems:'baseline', gap:'8px', cursor:'default', flexShrink:0,
+          fontFamily:MONO, fontSize:11.5, letterSpacing:'0.04em', color:T.tx2, whiteSpace:'nowrap',
           opacity: flipped ? 0 : 1, transition:'opacity 0.3s',
         }}>
-          <Typography sx={{ fontSize:'16px', lineHeight:1 }}>{w.icon}</Typography>
-          <Typography sx={{ fontSize:'12px', fontWeight:800, color:TEXT }}>{w.temp}°</Typography>
-          <Box sx={{ fontSize:'9px', fontWeight:700, px:'6px', py:'2px', borderRadius:'5px', color:impact.color, background:`${impact.color}18`, whiteSpace:'nowrap' }}>
-            {impact.label}
-          </Box>
-          {w.alert && <Box sx={{ width:6, height:6, borderRadius:'50%', background:AMBER, flexShrink:0, animation:'blinkDot 1.5s infinite' }}/>}
+          <span style={{ color:T.tx }}>{w.temp}°C</span>
+          <span style={{ color: w.alert ? T.oT : T.gT, textTransform:'uppercase' }}>{impact.label.replace(/^[^A-Za-z]+/, '')}</span>
         </Box>
       </Tooltip>
     );

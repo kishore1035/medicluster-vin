@@ -7,6 +7,7 @@ import IncidentQueue from '../components/IncidentQueue';
 import { FILTERS } from '../components/incidentFilters';
 import StatsCards from '../components/StatsCards';
 import UnitsPanel from '../components/UnitsPanel';
+import AIInsightsView from '../components/AIInsightsView';
 import AssignmentWizard from '../components/AssignmentWizard';
 import SOSAlertModal from '../components/SOSAlertModal';
 import LiveTrackingPanel from '../components/LiveTrackingPanel';
@@ -109,6 +110,7 @@ export default function DashboardPage({ user, onLogout }) {
   const [activeAssignment, setActiveAssignment]     = useState(null);
   const [focusAmbulance, setFocusAmbulance]         = useState(null);
   const [filter, setFilter]                         = useState('all');
+  const [view, setView]                             = useState('ops'); // 'ops' | 'ai'
   const [toolsAnchor, setToolsAnchor]               = useState(null);
   const [userAnchor, setUserAnchor]                 = useState(null);
   const clock                                       = useClock();
@@ -311,7 +313,7 @@ export default function DashboardPage({ user, onLogout }) {
           </Typography>
         </Box>
 
-        <Segmented label="View" value="ops" onChange={(k) => k === 'ai' && navigate('/insights')}
+        <Segmented label="View" value={view} onChange={setView}
           items={[{ key:'ops', label:'Operations' }, { key:'ai', label:'AI insights' }]} />
 
         <Box sx={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:'12px', flex:1, minWidth:0 }}>
@@ -344,6 +346,7 @@ export default function DashboardPage({ user, onLogout }) {
         <MenuItem onClick={tool(() => setRosterOpen(true))}>Fleet &amp; driver roster</MenuItem>
         <Divider />
         <MenuItem onClick={tool(() => setShiftReportOpen(true))}>Shift report</MenuItem>
+        <MenuItem onClick={tool(() => navigate('/insights'))}>Hospital matching &amp; insights</MenuItem>
         <MenuItem onClick={tool(() => navigate('/analytics'))}>Analytics &amp; SLAs</MenuItem>
         <MenuItem onClick={tool(() => navigate('/mobile'))}>Fleet telemetry</MenuItem>
         <MenuItem onClick={tool(() => window.open('/#/driver', '_blank'))}>Driver view</MenuItem>
@@ -359,6 +362,14 @@ export default function DashboardPage({ user, onLogout }) {
         <MenuItem onClick={() => { setUserAnchor(null); onLogout?.(); }}>Sign out</MenuItem>
       </Menu>
 
+      {view === 'ai' && (
+        <AIInsightsView ambulances={fleet} onApprove={(unit, area) => {
+          const name = unit.call_sign || unit.vehicle_number;
+          setSnackbar({ message: `Move approved: ${name} to ${area}`, severity: 'success' });
+        }} />
+      )}
+
+      {view === 'ops' && <>
       {/* ══ KPI STRIP ══ */}
       <Box sx={{ flexShrink:0, px:{ xs:'16px', md:'32px' }, py:'16px', borderBottom:`1px solid ${T.bd}` }}>
         <StatsCards stats={stats} incidents={incidents} ambulances={fleet} />
@@ -490,6 +501,8 @@ export default function DashboardPage({ user, onLogout }) {
           <QuickCommsPanel ambulances={fleet} />
         </Box>
       </Box>
+
+      </>}
 
       {/* ══ Modals ══ */}
       <SOSAlertModal open={sosModalOpen} onClose={()=>setSosModalOpen(false)} onSOSCreated={handleSOSCreated} />
