@@ -13,4 +13,4 @@ COPY . .
 EXPOSE 8000
 
 # Render injects PORT; one worker keeps memory within a single model load.
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} --workers 1 --timeout 180 app:app"]
+CMD ["sh", "-c", "gunicorn --bind [::]:${PORT:-8000} --workers 1 --timeout 180 app:app"]
