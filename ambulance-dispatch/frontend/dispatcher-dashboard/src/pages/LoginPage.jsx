@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import { T, SANS, MONO, SERIF, btnSx, monoLabelSx } from '../theme/tokens';
+import AccessGuide from '../components/AccessGuide';
 
 const DEMO_ACCOUNTS = [
   {
@@ -102,6 +103,7 @@ export default function LoginPage() {
           <Typography sx={{ fontSize: 15, lineHeight: 1.55, color: '#b3b4b3', maxWidth: 420 }}>
             Live incidents, unit positions, hospital capacity and radio comms — triaged and dispatched from a single screen.
           </Typography>
+          <AccessGuide current="dispatcher" dark sx={{ maxWidth: 440, mt: 1 }} />
         </Box>
         <Typography sx={{ fontFamily: MONO, fontSize: 11, color: '#8a8c8e' }}>Authorised personnel only · Activity is logged</Typography>
       </Box>
@@ -134,6 +136,8 @@ export default function LoginPage() {
           <Button type="submit" disabled={isSubmitting} sx={{ ...btnSx(true), height: 44 }}>
             {isSubmitting ? <CircularProgress size={18} sx={{ color: T.bg }} /> : 'Sign in'}
           </Button>
+
+          <AccessGuide current="dispatcher" sx={{ display: { xs: 'flex', lg: 'none' }, mt: 1 }} />
 
           {/* Demo roles (dev builds only) */}
           {import.meta.env.DEV && (

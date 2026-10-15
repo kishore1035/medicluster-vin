@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { requestPatientCode, verifyPatientCode } from "../../api/apiClient";
 import Logo from "../../components/Logo";
+import AccessGuide from "../../components/AccessGuide";
 
 const CODE_LEN = 6;
 
@@ -120,7 +121,7 @@ export default function LoginScreen({ onSignedIn }) {
           We’ll text a 6-digit code to this number. Your clinic links your records to it.
         </span>
       </div>
-      <span className="mt-6 text-[13px] text-slate-500">Clinician or dispatcher? Use the web app.</span>
+      <AccessGuide current="patient" className="mt-4" />
     </form>
   );
 }

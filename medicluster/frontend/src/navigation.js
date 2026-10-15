@@ -1,3 +1,6 @@
+// Where the separate dispatch app lives (set VITE_DISPATCH_URL in production builds).
+export const DISPATCH_URL = import.meta.env.VITE_DISPATCH_URL || "http://localhost:5174";
+
 // Clinician app sections, in sidebar order. Numbers ("01", "02", …) follow this order.
 export const NAV_GROUPS = [
   { label: "Overview", items: [
@@ -21,7 +24,7 @@ export const NAV_GROUPS = [
   ] },
   { label: "Operations", items: [
     { to: "/hospitals", label: "Hospitals" },
-    { href: "http://localhost:5174", label: "Dispatch" },
+    { href: DISPATCH_URL, label: "Dispatch" },
   ] },
 ];
 
