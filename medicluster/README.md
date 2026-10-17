@@ -11,6 +11,16 @@
 
 MediCluster is a full-stack web application that automatically identifies at-risk patient populations from raw health data — **without labels**. Upload a CSV of patient vitals, choose a clustering algorithm, and instantly visualise risk tiers across your patient cohort.
 
+### Patient Android app
+
+Patients can install **MediCluster Patient** on Android 8.0 or later. Open the
+patient portal at `/app` and select **Download Android app**. The installer is
+also served directly at `/downloads/medicluster-patient.apk` on the same website.
+It opens patient screens only and uses the existing mobile-number/OTP login.
+Internet is required; SMS delivery must be configured separately.
+
+Source, signing, and rebuild instructions are in [patient-android/README.md](patient-android/README.md).
+
 **Key features:**
 - 4 clustering algorithms: K-Means, DBSCAN, Hierarchical, GMM
 - Interactive PCA scatter plot with risk-tier colour coding
