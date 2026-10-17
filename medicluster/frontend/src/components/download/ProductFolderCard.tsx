@@ -5,19 +5,8 @@ import GlassFolder, {
   type FolderFile,
 } from "@/components/ui/glass-folder-cards";
 import { createPatientDownloader } from "@/patient-app/patientDownload";
-
-export interface ProductApp {
-  id: string;
-  name: string;
-  description: string;
-  webHref: string | null;
-  android: boolean;
-}
-export interface PatientRelease {
-  versionName: string;
-  sizeBytes: number;
-  sha256: string;
-}
+import type { ProductApp, PatientRelease } from "./appTypes";
+export type { ProductApp, PatientRelease } from "./appTypes";
 const ART: Record<
   string,
   { art: ArtPreset; tone: "light" | "dark"; seed: number }

@@ -11,9 +11,8 @@ import {
   Ambulance,
 } from "lucide-react";
 import Logo from "../components/Logo";
-import ProductFolderCard from "../components/download/ProductFolderCard";
+import ApplicationSelector from "../components/download/ApplicationSelector";
 import CareArtifact from "../components/download/CareArtifact";
-import SculptureHero from "@/components/ui/liquid-sculpture-hero";
 import {
   CareStory,
   PatientSpotlight,
@@ -45,11 +44,9 @@ export default function DownloadPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
   const [release, setRelease] = useState(null);
-  const [openProduct, setOpenProduct] = useState(null);
   const rootRef = useRef(null);
   const headerRef = useRef(null);
   const productsRef = useRef(null);
-  const heroRef = useRef(null);
   useSiteMotion(rootRef, motionPaused);
 
   useEffect(() => {
@@ -86,16 +83,13 @@ export default function DownloadPage() {
   const showInstall = () => {
     setInstallOpen(true);
     requestAnimationFrame(() =>
-      document
-        .getElementById("install")
-        ?.scrollIntoView({
-          behavior:
-            motionPaused ||
-            matchMedia("(prefers-reduced-motion: reduce)").matches
-              ? "instant"
-              : "smooth",
-          block: "center",
-        }),
+      document.getElementById("install")?.scrollIntoView({
+        behavior:
+          motionPaused || matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "instant"
+            : "smooth",
+        block: "center",
+      }),
     );
   };
 
@@ -204,30 +198,7 @@ export default function DownloadPage() {
         <section
           className="download-hero mc-container"
           aria-labelledby="download-title"
-          ref={heroRef}
         >
-          <div className="download-sculpture-backdrop">
-            <SculptureHero
-              backgroundOnly
-              eventTargetRef={heroRef}
-              paused={motionPaused}
-              src="/images/liquid-sculpture.webp"
-              mobileSrc="/images/liquid-sculpture.webp"
-              darkSrc="/images/liquid-sculpture.webp"
-              mobileDarkSrc="/images/liquid-sculpture.webp"
-              background="#fbfaf7"
-              height="100%"
-              sculptureScale={1.1}
-              mobileSculptureScale={1.3}
-              particleDensity={0.45}
-              strength={0.65}
-              radius={200}
-              turbulence={0.55}
-              liquid={0.65}
-              loadFonts={false}
-              showCredit={false}
-            />
-          </div>
           <div className="download-hero-content">
             <h1 id="download-title">
               <span>Better care.</span>
@@ -324,39 +295,20 @@ export default function DownloadPage() {
         >
           <div className="mc-container">
             <div className="download-section-heading" data-reveal>
-              <div>
-                <p className="mc-section-label">The apps</p>
-                <h2 id="download-apps-title">Find your MediCluster.</h2>
-              </div>
-              <p>
-                Choose your role.
-                <br />
-                Get connected.
-              </p>
+              <h2 id="download-apps-title">Find your MediCluster.</h2>
+              <p>Choose your role. Get connected.</p>
             </div>
-            <div className="download-folder-grid">
-              {APPS.map((app, index) => (
-                <ProductFolderCard
-                  key={app.id}
-                  app={app}
-                  release={release}
-                  index={index}
-                  paused={motionPaused}
-                  open={openProduct === app.id}
-                  onOpenChange={(open) => setOpenProduct(open ? app.id : null)}
-                  onInstall={showInstall}
-                />
-              ))}
-            </div>
-            <p className="download-folder-hint">
-              Click a folder to explore its apps.
-            </p>
+            <ApplicationSelector
+              apps={APPS}
+              release={release}
+              onInstall={showInstall}
+            />
           </div>
         </section>
         <PatientSpotlight />
         <ClinicalSpotlight />
         <CareJourney />
-        <GetStarted />
+        <GetStarted paused={motionPaused} />
         <LandingFAQ
           release={release}
           installOpen={installOpen}

@@ -38,26 +38,26 @@ function PopulationMap({
   const centers =
     method === "gmm"
       ? [
-          [184, 129],
-          [302, 104],
-          [301, 192],
+          [235, 129],
+          [385, 104],
+          [383, 192],
         ]
       : [
-          [150, 126],
-          [366, 94],
-          [321, 213],
+          [180, 126],
+          [470, 94],
+          [410, 213],
         ];
   const opacity = (group: number) =>
     focus === null || focus === group ? 1 : 0.16;
   return (
     <svg
       className="mc-population-map"
-      viewBox="0 0 520 310"
+      viewBox="0 0 650 310"
       role="img"
       aria-label={`${METHODS.find((item) => item.id === method)?.label} illustration, not patient results${focus === null ? "" : `, group ${focus + 1} focused`}`}
     >
       {hierarchy ? (
-        <>
+        <g transform="translate(65 0)">
           <path
             d="M260 30V60M150 100V60H370V100"
             fill="none"
@@ -103,22 +103,22 @@ function PopulationMap({
           <text x="260" y="294" textAnchor="middle" fill="#737d69">
             Illustrative group hierarchy
           </text>
-        </>
+        </g>
       ) : (
         <>
           {[72, 134, 196, 258].map((y) => (
             <path
               key={y}
-              d={`M48 ${y}H495`}
+              d={`M48 ${y}H615`}
               stroke="#eceee7"
               strokeDasharray="3 5"
             />
           ))}
-          {[95, 190, 285, 380, 475].map((x) => (
+          {[95, 215, 335, 455, 575].map((x) => (
             <path key={x} d={`M${x} 28V258`} stroke="#f1f2ec" />
           ))}
-          <path d="M48 28V258H495" stroke="#bfc6b7" fill="none" />
-          <text x="275" y="294" textAnchor="middle" fill="#737d69">
+          <path d="M48 28V258H615" stroke="#bfc6b7" fill="none" />
+          <text x="335" y="294" textAnchor="middle" fill="#737d69">
             Component 1
           </text>
           <text
@@ -135,7 +135,7 @@ function PopulationMap({
                   key={scale}
                   cx={cx}
                   cy={cy}
-                  rx={(method === "gmm" ? 91 : 70) * scale}
+                  rx={(method === "gmm" ? 116 : 88) * scale}
                   ry={(method === "gmm" ? 62 : 48) * scale}
                   fill={COLORS[group]}
                   fillOpacity={method === "gmm" ? 0.055 : 0.045}
@@ -145,7 +145,7 @@ function PopulationMap({
                 <ellipse
                   cx={cx}
                   cy={cy}
-                  rx="76"
+                  rx="95"
                   ry="50"
                   fill="none"
                   stroke={COLORS[group]}
@@ -157,7 +157,7 @@ function PopulationMap({
                 const angle = index * 2.3999632297 + group;
                 const radius = Math.sqrt(((index * 37 + 13) % 101) / 101);
                 const x =
-                  cx + Math.cos(angle) * radius * (method === "gmm" ? 77 : 63);
+                  cx + Math.cos(angle) * radius * (method === "gmm" ? 98 : 80);
                 const y =
                   cy + Math.sin(angle) * radius * (method === "gmm" ? 49 : 39);
                 return (
@@ -183,9 +183,9 @@ function PopulationMap({
           {method === "dbscan" &&
             [
               [75, 219],
-              [268, 45],
-              [462, 179],
-              [222, 201],
+              [335, 45],
+              [590, 179],
+              [280, 201],
             ].map(([x, y]) => (
               <circle key={x} cx={x} cy={y} r="2.6" fill="#7b8278" />
             ))}

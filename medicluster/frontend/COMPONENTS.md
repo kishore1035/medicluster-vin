@@ -120,7 +120,12 @@ installation links. The local `/home/vinay/yuva-garden-next` reference informed
 the editorial pacing, Hanken Grotesk/Bodoni Moda typography, scroll zoom and
 large closing wordmark; no garden content or runtime dependency is copied.
 
-`LandingSections.tsx` holds the semantic sections and local preview state.
+`LandingSections.tsx` holds the semantic sections and patient preview state.
+`ClinicalSpotlight.tsx` owns the compact clinical preview, keyboard-accessible
+method tabs and group-focus controls. Its hierarchy diagram, density outlines,
+centroid markers and mixture overlaps illustrate the selected method without
+using real patient data. Its heading uses the existing sans face, with one
+terracotta serif accent, and the preview stays beside the copy on desktop.
 Patient feature selectors change the phone preview; clinical tabs change an
 explicitly illustrative cluster diagram. Neither preview displays patient data.
 `SiteMotion.tsx` uses passive scroll events, one scheduled animation frame,

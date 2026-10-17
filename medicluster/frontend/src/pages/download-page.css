@@ -290,18 +290,6 @@
 .mc-text-link:hover svg {
   transform: translate(3px, -3px);
 }
-.download-sculpture-backdrop {
-  position: absolute;
-  inset: 8% 25% 20% -22%;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.17;
-  mix-blend-mode: multiply;
-  mask-image: radial-gradient(ellipse at 40% 50%, #000 15%, transparent 67%);
-}
-.download-sculpture-backdrop .sh-root {
-  pointer-events: none;
-}
 .mc-hero-artifact {
   position: relative;
   margin: 0;
@@ -554,29 +542,142 @@
   gap: 12px;
 }
 .download-apps {
-  padding-block: 100px 65px;
-  background: var(--mc-sage);
+  padding-block: 82px 76px;
+  background: #f7f8fb;
   scroll-margin-top: 88px;
 }
 .download-section-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 30px;
+  display: block;
+  text-align: center;
 }
-.download-section-heading h2 {
-  font-size: clamp(40px, 4.7vw, 74px);
-  line-height: 1.1;
+.download-apps .download-section-heading h2 {
+  font-size: clamp(30px, 3.2vw, 48px);
+  line-height: 1.15;
   margin: 0;
+  letter-spacing: -0.045em;
 }
-.download-section-heading .mc-section-label {
-  margin-bottom: 18px;
-}
-.download-section-heading > p {
-  font-size: 18px;
+.download-apps .download-section-heading > p {
+  font-size: 17px;
   line-height: 1.5;
-  margin: 0 0 5px;
+  margin: 12px 0 0;
+  color: #62675e;
 }
+.mc-application-selector {
+  width: min(100%, 860px);
+  margin: 35px auto 0;
+}
+.mc-application-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 17px;
+}
+.mc-application-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 20px;
+  border: 1px solid #e7e9e7;
+  border-radius: 99px;
+  background: #fff;
+  color: #52594f;
+  font-size: 13px;
+  cursor: pointer;
+  scroll-margin-top: 150px;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+.mc-application-tabs button[aria-selected="true"] {
+  color: #fff;
+  background: #17221d;
+  border-color: #17221d;
+}
+.mc-application-tabs button:hover:not([aria-selected="true"]) {
+  background: #edf0e8;
+  border-color: #cbd2c3;
+}
+.mc-application-tabs button svg {
+  flex-shrink: 0;
+}
+.mc-application-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 66px;
+  padding: 6px;
+  border: 1px solid #e7e9e7;
+  border-radius: 99px;
+  background: #fff;
+}
+.mc-application-action > p {
+  flex: 1;
+  padding-left: 20px;
+  margin: 0;
+  color: #72786d;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.mc-application-action .download-pill {
+  flex-shrink: 0;
+  min-height: 50px;
+  padding-inline: 25px;
+  font-size: 14px;
+}
+.mc-application-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+  min-height: 44px;
+  color: #72786d;
+  font-size: 12px;
+}
+.mc-application-options button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  border: 0;
+  padding: 0 3px;
+  color: #48503f;
+  background: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mc-application-options button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.mc-application-unavailable {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 25px;
+  font-size: 13px;
+  color: #73796a;
+  background: #f0f2eb;
+  border-radius: 99px;
+}
+.mc-application-feedback {
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+  color: #68755b;
+}
+.mc-application-error {
+  color: #a1362c;
+}
+
 .download-folder-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -944,6 +1045,7 @@
 }
 .mc-clinical h2 {
   font-family: var(--mc-sans);
+  font-weight: 500 !important;
   font-size: clamp(42px, 4.1vw, 72px);
   line-height: 1.08;
   letter-spacing: -0.05em;
@@ -1081,10 +1183,10 @@
 .mc-population-map {
   display: block;
   width: 100%;
-  height: clamp(225px, 18vw, 280px);
+  height: auto;
   margin-top: 8px;
   font-family: var(--mc-sans);
-  font-size: 10px;
+  font-size: 14px;
 }
 .mc-population-map [data-cluster] {
   transition: opacity 0.2s ease;
@@ -1213,6 +1315,7 @@
 }
 .mc-get-started {
   position: relative;
+  min-height: max(760px, calc(100svh - 88px));
   overflow: hidden;
   isolation: isolate;
   background: #e4ebdc;
@@ -1245,17 +1348,6 @@
   color: #606b56;
   margin-top: 23px;
   font-size: 12px;
-}
-.mc-cta-sculpture {
-  position: absolute;
-  z-index: -1;
-  width: 110%;
-  max-width: none;
-  bottom: -90%;
-  right: -15%;
-  opacity: 0.25;
-  mix-blend-mode: multiply;
-  mask-image: radial-gradient(ellipse, #000 30%, transparent 70%);
 }
 .mc-faq {
   display: grid;
@@ -1476,9 +1568,6 @@
   .mc-hero-bottom,
   .mc-role-strip {
     grid-column: 1;
-  }
-  .download-sculpture-backdrop {
-    inset: 0 0 50% -25%;
   }
   .mc-spotlight {
     gap: 42px;
@@ -1796,11 +1885,6 @@
     padding-inline: 16px;
     gap: 8px;
   }
-  .mc-cta-sculpture {
-    width: 180%;
-    right: -60%;
-    bottom: -35%;
-  }
   .mc-platform-note {
     font-size: 11px;
   }
@@ -1941,7 +2025,8 @@
     justify-self: center;
   }
   .mc-population-map {
-    height: clamp(210px, 46vw, 280px);
+    height: auto;
+    font-size: 20px;
   }
   .mc-console-header {
     padding: 16px 14px;
@@ -1961,5 +2046,72 @@
   .mc-method-description {
     margin-inline: 12px;
     font-size: 11px;
+  }
+}
+
+.mc-cta-liquid {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.78;
+  pointer-events: none;
+}
+.mc-get-started::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgb(228 235 220 / 0.97),
+    rgb(228 235 220 / 0.65) 42%,
+    transparent 90%
+  );
+}
+.mc-cta-liquid .sh-root {
+  pointer-events: none;
+}
+@media (max-width: 639px) {
+  .download-apps {
+    padding-block: 65px 55px;
+  }
+  .download-apps .download-section-heading > p {
+    font-size: 15px;
+  }
+  .mc-application-selector {
+    margin-top: 27px;
+  }
+  .mc-application-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mc-application-tabs button {
+    min-height: 44px;
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+  .mc-application-action {
+    gap: 12px;
+    border-radius: 28px;
+    padding: 8px;
+  }
+  .mc-application-action > p {
+    font-size: 12px;
+    padding-left: 9px;
+  }
+  .mc-application-action .download-pill {
+    min-height: 46px;
+    padding-inline: 16px;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .mc-application-unavailable {
+    padding-inline: 14px;
+    font-size: 12px;
+  }
+  .mc-application-options {
+    font-size: 11px;
+    gap: 7px;
   }
 }

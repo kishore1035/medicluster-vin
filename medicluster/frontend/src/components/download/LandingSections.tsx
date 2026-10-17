@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ArrowUpRight,
   Check,
@@ -10,7 +10,8 @@ import {
   Plus,
 } from "lucide-react";
 import Logo from "../Logo";
-import type { PatientRelease } from "./ProductFolderCard";
+import type { PatientRelease } from "./appTypes";
+import SculptureHero from "@/components/ui/liquid-sculpture-hero";
 
 export function TextLink({
   href,
@@ -293,15 +294,38 @@ export function CareJourney() {
   );
 }
 
-export function GetStarted() {
+export function GetStarted({ paused = false }: { paused?: boolean }) {
+  const sectionRef = useRef<HTMLElement>(null);
   return (
-    <section className="mc-get-started" aria-labelledby="get-started-title">
-      <img
-        className="mc-cta-sculpture"
-        src="/images/liquid-sculpture.webp"
-        alt=""
-        loading="lazy"
-      />
+    <section
+      ref={sectionRef}
+      className="mc-get-started"
+      aria-labelledby="get-started-title"
+    >
+      <div className="mc-cta-liquid">
+        <SculptureHero
+          backgroundOnly
+          eventTargetRef={sectionRef}
+          paused={paused}
+          src="/images/liquid-sculpture.webp"
+          mobileSrc="/images/liquid-sculpture.webp"
+          darkSrc="/images/liquid-sculpture.webp"
+          mobileDarkSrc="/images/liquid-sculpture.webp"
+          background="#e4ebdc"
+          height="100%"
+          sculptureScale={1.15}
+          mobileSculptureScale={1.9}
+          sculptureY={25}
+          particleDensity={0.4}
+          strength={0.8}
+          radius={200}
+          particleSpread={0.7}
+          turbulence={0.6}
+          liquid={0.8}
+          loadFonts={false}
+          showCredit={false}
+        />
+      </div>
       <div className="mc-container mc-get-started-layout" data-reveal>
         <h2 id="get-started-title">
           Your next step.
@@ -382,7 +406,7 @@ export function LandingFAQ({
           </summary>
           <div>
             <p>
-              Choose Download Android in the Patient app folder. Open the
+              Choose Download Android on the Patient app card. Open the
               downloaded APK on your phone and follow Android’s installation
               steps. If asked, allow installation from your browser.
             </p>
