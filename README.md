@@ -1,30 +1,120 @@
-# medicluster
+# MediCluster
 
-Clinical decision support system combining LSTM/Prophet time-series forecasting with a DenseNet-121 chest X-ray classifier, wrapped in SHAP explainability so predictions stay interpretable for clinicians.
+Patient risk analysis, a patient portal, and ambulance dispatch applications.
 
+## Repository structure
 
-**Primary language:** JavaScript
+```text
+medicluster/
+  frontend/       React clinician dashboard and patient app (/app)
+  backend/        Express API, MongoDB models, staff and patient authentication
+  ml-engine/      Flask clustering, risk analysis, imaging, NLP and forecasting
+  Dockerfile      Combined frontend/backend deployment
+  docker-compose.yml
+ambulance-dispatch/
+  frontend/
+    dispatcher-dashboard/   Dispatcher dashboard and crew app
+      supabase/             Database migrations and driver-login Edge Function
+    police-dashboard/       Police dashboard
+  backend/
+    api/                    Express dispatch API
+    auth/                   Authentication service
+    websocket/              Socket.IO server
+    services/               Dispatch, routing, siren detection and other services
+  mobile/                   React Native citizen and driver apps
+  infrastructure/           Database, routing, cache and failover configuration
+  tests/                    Dispatch load tests
+```
 
-## Project structure
+Keep application paths unchanged when configuring Render or Railway service roots.
 
-Top-level files in this repository:
+## MediCluster local setup
 
-- `MediCluster_Claude_Design.pptx`
-- `MediCluster_Clean_Feature_Roadmap.pptx`
-- `MediCluster_Definitive.pptx`
-- `MediCluster_Documentation.docx`
-- `MediCluster_Full_Report.md`
-- `MediCluster_Presentation.pptx`
-- `MediCluster_Report.docx`
-- `MediCluster_Slide_Explanations.docx`
-- `Patient_Health_Risk_Build_Prompt.md`
-- `REPO_SELECTION.md`
-- `ambulance-dispatch`
-- `build_deck.py`
-- `docs`
-- `download_repos.ps1`
-- `gen_docs.py`
+Prerequisites: Node.js 20+, Python 3.10+, and MongoDB.
 
----
+1. Copy `medicluster/backend/.env.example` to `medicluster/backend/.env`.
+2. Set `MONGO_URI`, a random `JWT_SECRET` of at least 32 characters, and `ML_ENGINE_URL=http://localhost:8080`.
+3. Set `ALLOWED_EMAIL_DOMAINS` to the comma-separated work email domains permitted to register staff accounts.
+4. Run each service in a separate terminal:
 
-Maintained by [vinay3254](https://github.com/vinay3254). See the repo at <https://github.com/vinay3254/medicluster>.
+```bash
+# ML engine
+cd medicluster/ml-engine
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python app.py
+```
+
+```bash
+# Backend
+cd medicluster/backend
+npm ci
+npm run dev
+```
+
+```bash
+# Frontend
+cd medicluster/frontend
+npm ci
+npm run dev
+```
+
+Open `http://localhost:3000/login` for staff or `http://localhost:3000/app` for patients.
+Patient sign-in requires a clinic-linked mobile number. SMS delivery is not implemented;
+`OTP_DEV_LOG=true` enables server-log codes for development only.
+
+## Dispatch setup
+
+The dispatcher dashboard uses Supabase Auth, database tables, Realtime, and the
+`driver-login` Edge Function. Configure these public frontend variables before building:
+
+```env
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY
+VITE_MEDICLUSTER_URL=http://localhost:3000
+```
+
+```bash
+cd ambulance-dispatch/frontend/dispatcher-dashboard
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5174/#/login` for dispatchers or
+`http://localhost:5174/#/driver/login` for crews. Crew sign-in uses an employee ID
+and PIN. The driver credentials migration records table setup but omits the SQL
+function bodies; restore `driver_pin_check` and `set_driver_pin` from the existing
+Supabase project when provisioning a new database.
+
+Some dispatch actions still use the REST API and Socket.IO services. Configure
+`VITE_API_URL` and `VITE_WEBSOCKET_URL` for those services and verify authentication
+compatibility before using those actions. Deploying the dashboard alone does not
+complete these integrations.
+
+## Deployment
+
+| Service | Repository root | Deployment |
+| --- | --- | --- |
+| MediCluster web + API | `medicluster` | Existing Dockerfile builds React and serves it from Express |
+| MediCluster ML | `medicluster/ml-engine` | Existing Dockerfile runs Gunicorn |
+| Dispatch dashboard + crew app | `ambulance-dispatch/frontend/dispatcher-dashboard` | Existing Dockerfile, or static build with `npm ci && npm run build`, publish `dist` |
+
+Set backend secrets in the hosting provider, including `MONGO_URI`, `JWT_SECRET`,
+and optional Ollama provider credentials. Point `ML_ENGINE_URL` to the deployed ML
+service. Docker containers use the hosting provider's `PORT` variable.
+
+Frontend environment variables are embedded at build time. The MediCluster
+frontend reads `VITE_DISPATCH_URL`; its current Dockerfile needs a corresponding
+build argument before that variable can configure deployed navigation. The dispatch
+Dockerfile similarly needs a `VITE_MEDICLUSTER_URL` build argument for its return links.
+
+Health endpoints: MediCluster `/api/health`, ML `/health`, and ML connectivity
+through the web service at `/api/health/ml`.
+
+Do not commit `.env` files, private keys, database credentials, generated builds,
+or dependency directories. Public frontend configuration must never contain a
+Supabase service-role key.
+
+Application-specific READMEs, deployment files, sample data, migrations, and tests
+remain alongside their respective services.

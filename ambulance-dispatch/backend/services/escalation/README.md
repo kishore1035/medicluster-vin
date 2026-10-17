@@ -396,8 +396,6 @@ const poolStatus = poolingManager.getPoolStatus();
 
 ## 🔄 Complete Workflow Example
 
-See [ESCALATION_WORKFLOW.md](./ESCALATION_WORKFLOW.md) for a detailed example of a complete multi-patient incident from declaration through resolution.
-
 See [USAGE_EXAMPLES.js](./USAGE_EXAMPLES.js) for code examples of each component.
 
 ## 📋 Key Methods
@@ -451,7 +449,6 @@ Part of the Ambulance Dispatch System
 
 ## 📚 Documentation
 
-- [Escalation Workflow](./ESCALATION_WORKFLOW.md) - Complete workflow documentation
 - [Usage Examples](./USAGE_EXAMPLES.js) - Code examples
 - Component files include detailed JSDoc comments
 
