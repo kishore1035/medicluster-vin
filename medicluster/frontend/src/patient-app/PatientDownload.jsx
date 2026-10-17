@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { isPatientAndroid, patientApkUrl, PATIENT_RELEASE_PATH, readPatientRelease } from "./patientPlatform";
+import { isPatientAndroid, PATIENT_RELEASE_PATH, readPatientRelease } from "./patientPlatform";
+import PatientDownloadButton from "./PatientDownloadButton";
 
 /** Installer is available only after CI has published a signed APK and its metadata. */
 export default function PatientDownload() {
@@ -25,10 +26,10 @@ export default function PatientDownload() {
         <h2 className="text-base font-medium">MediCluster Patient for Android</h2>
         <p className="text-[13px] text-slate-600 mt-1">Your medicines, readings and CliniQ, in one patient app.</p>
       </div>
-      <a href={patientApkUrl(release)} download="MediCluster-Patient.apk"
+      <PatientDownloadButton release={release}
         className="h-11 rounded border border-ink grid place-items-center text-[14px] font-medium">
         Download Android app
-      </a>
+      </PatientDownloadButton>
       <p className="text-xs text-slate-600">Android 8.0+ · Version {release.versionName} · {size}</p>
       <p className="text-xs text-slate-600">Open the downloaded APK to install. If Android asks, allow installs from this browser. Internet required.</p>
       <details className="text-xs text-slate-500">

@@ -15,7 +15,8 @@ MediCluster is a full-stack web application that automatically identifies at-ris
 
 Patients can install **MediCluster Patient** on Android 8.0 or later. Open the
 patient portal at `/app` and select **Download Android app**. The installer is
-also served directly at `/downloads/medicluster-patient.apk` on the same website.
+available from `/download`. Old direct APK links redirect to that page to stop
+cold-start retries from triggering repeated downloads.
 It opens patient screens only and uses the existing mobile-number/OTP login.
 Internet is required; SMS delivery must be configured separately.
 

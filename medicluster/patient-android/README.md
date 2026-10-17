@@ -51,6 +51,9 @@ gradle :app:testReleaseUnitTest :app:lintRelease :app:assembleRelease
 APK. Release version defaults to 1.0.0/code 1 locally; CI assigns increasing run numbers.
 
 After website deployment, `/app` offers **Download Android app** on the patient login
-screen. The direct installer URL is `/downloads/medicluster-patient.apk`; release
-metadata and SHA-256 are in `/downloads/patient-app.json`. Android may ask the user to
+screen. Share `/download` for installation. Legacy `/downloads/medicluster-patient.apk`
+links redirect there, including URLs with checksum query parameters. The download
+button fetches `POST /api/patient-installer`, checks size and SHA-256, then saves
+one APK without navigating away. HTML wake-up pages never become APK downloads.
+Release metadata and SHA-256 are in `/downloads/patient-app.json`. Android may ask the user to
 allow installation from their browser. This is direct distribution, not a Play Store listing.

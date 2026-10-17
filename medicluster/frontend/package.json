@@ -7,27 +7,33 @@
     "test": "node --test tests/*.test.js",
     "dev": "vite --port 3000",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
     "axios": "^1.6.7",
+    "clsx": "^2.1.1",
     "d3": "^7.9.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
+    "lucide-react": "^1.59.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.0",
-    "recharts": "^2.12.0"
+    "recharts": "^2.12.0",
+    "tailwind-merge": "^2.6.1"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
+    "typescript": "^7.0.2",
     "vite": "^5.1.0"
   }
 }

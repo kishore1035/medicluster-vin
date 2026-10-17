@@ -1,7 +1,5 @@
 import React, { useEffect, useRef } from "react";
 
-export { default as ReactiveBackdrop } from "./FluidBackdrop";
-
 export function ProductCard({ app, children, paused = false }) {
   const ref = useRef(null);
   useEffect(() => {

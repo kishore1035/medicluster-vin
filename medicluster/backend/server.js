@@ -29,6 +29,7 @@ const { requireAuth } = require("./middleware/auth");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const PUBLIC_DIR = path.join(__dirname, "public");
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 const CORS_ORIGINS = ["http://localhost:3000", "http://localhost:5173",
@@ -41,6 +42,10 @@ app.use((req, _res, next) => {
   next();
 });
 // ── Routes ────────────────────────────────────────────────────────────────────
+app.use(require('./routes/patientInstallerRoutes')(
+  fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))
+    ? PUBLIC_DIR : path.join(__dirname, '../frontend/public')
+));
 app.use("/api/auth",    authRoutes);
 app.use("/api/patient-auth", patientAuthRoutes);
 // Clinician-only data. Patient-app and dispatch endpoints stay unauthenticated.
@@ -67,7 +72,6 @@ app.use("/api", (_req, res) => {
 
 // ── Built frontend (production image) ───────────────────────────────────────
 // Serves the React app from ./public and falls back to index.html for client routes.
-const PUBLIC_DIR = path.join(__dirname, "public");
 if (fs.existsSync(path.join(PUBLIC_DIR, "index.html"))) {
   app.use(express.static(PUBLIC_DIR, { index: false, maxAge: "1h" }));
   app.get("*", (_req, res) => res.sendFile(path.join(PUBLIC_DIR, "index.html")));

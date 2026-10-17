@@ -36,6 +36,15 @@ export default {
   theme: {
     extend: {
       colors: {
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        ...Object.fromEntries(["card", "popover", "primary", "secondary", "muted", "accent", "destructive"].map((name) => [name, {
+          DEFAULT: `hsl(var(--${name}))`,
+          foreground: `hsl(var(--${name}-foreground))`,
+        }])),
         white: "#fbfaf7",
         slate: neutral, gray: neutral, zinc: neutral, stone: neutral,
         blue: accent, indigo: accent, sky: accent, cyan: accent,
