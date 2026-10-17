@@ -7,11 +7,6 @@ import { PATIENT_RELEASE_PATH, patientApkUrl, readPatientRelease } from "../pati
 import "./download-page.css";
 
 const APPS = buildAppCatalog(DISPATCH_URL, { allowLocal: import.meta.env.DEV });
-const ARTWORK = { medicluster: "cubes", patient: "discs", dispatch: "plane", crew: "torus" };
-function GlassArt({ name, className = "", eager = false }) {
-  return <img className={`download-glass ${className}`} src={`/images/download/${name}.webp`} width="512" height="512" alt="" aria-hidden="true" loading={eager ? "eager" : "lazy"} decoding="async" />;
-}
-
 function Icon({ name, className = "" }) {
   const paths = {
     clinic: <><path d="M4 3v5a5 5 0 0 0 10 0V3M4 3h2M12 3h2M9 13v3a5 5 0 0 0 10 0v-3" /><circle cx="19" cy="11" r="2" /></>,
@@ -88,9 +83,6 @@ export default function DownloadPage() {
       <main>
         <section className="download-hero" aria-labelledby="download-title">
           <ReactiveBackdrop paused={motionPaused} />
-          <div className="download-hero-art download-art-torus"><GlassArt name="torus" eager /></div>
-          <div className="download-hero-art download-art-cross"><GlassArt name="cross" eager /></div>
-          <div className="download-hero-art download-art-ribbon"><GlassArt name="ribbon" eager /></div>
           <div className="download-hero-content">
             <h1 id="download-title"><span>Better care.</span><span>Everywhere you are.</span></h1>
             <p>One connected platform. The right app for every role.</p>
@@ -102,7 +94,7 @@ export default function DownloadPage() {
         <section className="download-apps download-container" id="apps" aria-labelledby="download-apps-title">
           <div className="download-section-heading"><h2 id="download-apps-title">Find your MediCluster.</h2><p>Choose your role. Get connected.</p></div>
           <div className="download-app-list">{APPS.map((app) => <ProductCard app={app} key={app.id} paused={motionPaused}>
-            <div className="download-card-art"><GlassArt name={ARTWORK[app.id]} /><span className="download-card-symbol"><Icon name={app.icon} /></span></div>
+            <div className="download-card-art"><span className="download-card-symbol"><Icon name={app.icon} /></span></div>
             <div className="download-card-info">
             <div className="download-app-description"><h3 id={`${app.id}-title`}>{app.name}</h3><p>{app.description}</p></div>
             <div className="download-app-actions">
