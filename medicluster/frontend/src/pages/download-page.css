@@ -11,11 +11,11 @@
 .download-portal h1, .download-portal h2, .download-portal h3 { font-family: inherit; font-weight: 400; letter-spacing: -.045em; }
 .download-portal a, .download-portal button, .download-portal summary { -webkit-tap-highlight-color: transparent; }
 .download-portal a:focus-visible, .download-portal button:focus-visible, .download-portal summary:focus-visible { outline: 2px solid #4e61e8; outline-offset: 5px; }
-.download-container { width: min(1180px, calc(100% - 96px)); margin-inline: auto; }
+.download-container { width: calc(100% - 64px); margin-inline: auto; }
 .download-skip { position: fixed; top: -80px; left: 20px; z-index: 50; padding: 12px 20px; background: #111215; color: #fff !important; border-radius: 30px; }
 .download-skip:focus { top: 16px; }
 .download-header { position: sticky; top: 0; z-index: 30; background: #fff; border-bottom: 1px solid #f4f4f5; }
-.download-header-inner { min-height: 88px; padding-inline: 48px; max-width: 1536px; margin-inline: auto; display: flex; align-items: center; gap: 58px; }
+.download-header-inner { min-height: 88px; padding-inline: 32px; display: flex; align-items: center; gap: 58px; }
 .download-brand { display: inline-flex; align-items: center; gap: 12px; white-space: nowrap; font-size: 25px; letter-spacing: -.05em; text-decoration: none; }
 .download-brand svg { width: 32px; height: 32px; flex-shrink: 0; }
 .download-nav { display: flex; align-items: center; gap: 36px; font-size: 14px; }
@@ -32,7 +32,7 @@
 .download-header-cta { margin-left: auto; min-height: 42px; padding-inline: 24px; }
 .download-header-cta svg { display: none; }
 .download-menu { position: relative; background: #fff; border-bottom: 1px solid var(--download-line); }
-.download-menu-inner { width: min(1180px, calc(100% - 96px)); margin-inline: auto; padding-block: 48px 52px; display: grid; grid-template-columns: 1fr 1.15fr .9fr; gap: 36px; }
+.download-menu-inner { width: calc(100% - 64px); margin-inline: auto; padding-block: 48px 52px; display: grid; grid-template-columns: 1fr 1.15fr .9fr; gap: 36px; }
 .download-menu-intro h2 { margin: 0 0 24px; font-size: 26px; line-height: 1.1; letter-spacing: -.045em; }
 .download-menu-intro > a { display: inline-flex; background: #f7f7f8; border-radius: 30px; font-size: 14px; padding: 12px 18px; }
 .download-menu-list { display: flex; flex-direction: column; gap: 3px; border-left: 1px solid var(--download-line); padding-left: 34px; }
