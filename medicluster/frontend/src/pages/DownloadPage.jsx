@@ -1,17 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
 import Logo from "../components/Logo";
+import { ProductCard, ReactiveBackdrop } from "../components/download/ProductMotion";
 import { DISPATCH_URL } from "../navigation";
 import { buildAppCatalog } from "../data/appCatalog";
 import { PATIENT_RELEASE_PATH, patientApkUrl, readPatientRelease } from "../patient-app/patientPlatform";
 import "./download-page.css";
 
 const APPS = buildAppCatalog(DISPATCH_URL, { allowLocal: import.meta.env.DEV });
-const PARTICLES = [
-  [7, 13, "#7950ff", -34], [21, 25, "#f78322", 35], [93, 9, "#f78322", -35],
-  [87, 16, "#5750ff", -34], [7, 55, "#2f95ff", -37], [4, 64, "#f78322", -35],
-  [96, 65, "#7950ff", -35], [13, 81, "#7950ff", 35], [84, 80, "#5750ff", 35],
-  [94, 87, "#f78322", 35], [26, 93, "#f78322", -35],
-];
+const ARTWORK = { medicluster: "cubes", patient: "discs", dispatch: "plane", crew: "torus" };
+function GlassArt({ name, className = "", eager = false }) {
+  return <img className={`download-glass ${className}`} src={`/images/download/${name}.webp`} width="512" height="512" alt="" aria-hidden="true" loading={eager ? "eager" : "lazy"} decoding="async" />;
+}
 
 function Icon({ name, className = "" }) {
   const paths = {
@@ -21,6 +20,8 @@ function Icon({ name, className = "" }) {
     ambulance: <><path d="M3 5h11v14H2V7a2 2 0 0 1 1-2ZM14 9h4l4 5v5h-8M7 8v6M4 11h6M17 10v4h5" /><circle cx="6" cy="19" r="2.3" fill="currentColor" stroke="none" /><circle cx="18" cy="19" r="2.3" fill="currentColor" stroke="none" /></>,
     down: <path d="M12 4v16m-6-6 6 6 6-6" />,
     chevron: <path d="m6 9 6 6 6-6" />,
+    pause: <path d="M9 5v14M15 5v14" />,
+    play: <path d="m8 5 11 7-11 7V5Z" />,
     plus: <path d="M12 5v14M5 12h14" />,
   };
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
@@ -31,6 +32,7 @@ function Brand({ footer = false }) {
 }
 
 export default function DownloadPage() {
+  const [motionPaused, setMotionPaused] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
   const [release, setRelease] = useState(null);
@@ -58,7 +60,7 @@ export default function DownloadPage() {
   }, [menuOpen]);
 
   return (
-    <div className="download-portal">
+    <div className="download-portal" data-motion-paused={motionPaused}>
       <a className="download-skip" href="#apps">Skip to apps</a>
       <header className="download-header" ref={headerRef}>
         <div className="download-header-inner">
@@ -85,18 +87,23 @@ export default function DownloadPage() {
 
       <main>
         <section className="download-hero" aria-labelledby="download-title">
-          <div className="download-particles" aria-hidden="true">{PARTICLES.map(([x, y, color, angle], i) => <i key={i} style={{ left: `${x}%`, top: `${y}%`, color, "--dash-angle": `${angle}deg`, "--dash-delay": `${i * -0.7}s` }} />)}</div>
+          <ReactiveBackdrop paused={motionPaused} />
+          <div className="download-hero-art download-art-torus"><GlassArt name="torus" eager /></div>
+          <div className="download-hero-art download-art-cross"><GlassArt name="cross" eager /></div>
+          <div className="download-hero-art download-art-ribbon"><GlassArt name="ribbon" eager /></div>
           <div className="download-hero-content">
             <h1 id="download-title"><span>Better care.</span><span>Everywhere you are.</span></h1>
             <p>One connected platform. The right app for every role.</p>
             <a className="download-pill download-pill-dark download-explore" href="#apps">Explore apps <Icon name="down" /></a>
           </div>
+          <button type="button" className="download-motion-toggle" onClick={() => setMotionPaused((value) => !value)} aria-pressed={motionPaused} aria-label={motionPaused ? "Resume animations" : "Pause animations"}><Icon name={motionPaused ? "play" : "pause"} /><span>{motionPaused ? "Motion paused" : "Pause motion"}</span></button>
         </section>
 
         <section className="download-apps download-container" id="apps" aria-labelledby="download-apps-title">
           <div className="download-section-heading"><h2 id="download-apps-title">Find your MediCluster.</h2><p>Choose your role. Get connected.</p></div>
-          <div className="download-app-list">{APPS.map((app) => <article className="download-app-row" id={app.id} key={app.id} aria-labelledby={`${app.id}-title`}>
-            <Icon name={app.icon} className="download-app-icon" />
+          <div className="download-app-list">{APPS.map((app) => <ProductCard app={app} key={app.id} paused={motionPaused}>
+            <div className="download-card-art"><GlassArt name={ARTWORK[app.id]} /><span className="download-card-symbol"><Icon name={app.icon} /></span></div>
+            <div className="download-card-info">
             <div className="download-app-description"><h3 id={`${app.id}-title`}>{app.name}</h3><p>{app.description}</p></div>
             <div className="download-app-actions">
               <span className="download-platform">{app.android ? "Android 8.0+" : "Web app"}</span>
@@ -109,7 +116,8 @@ export default function DownloadPage() {
                   : <span className="download-unavailable">Coming soon</span>}
               </div>
             </div>
-          </article>)}</div>
+            </div>
+          </ProductCard>)}</div>
 
           <details className="download-install" id="install" open={installOpen} onToggle={(event) => setInstallOpen(event.currentTarget.open)}>
             <summary>How to install <Icon name="plus" /></summary>
