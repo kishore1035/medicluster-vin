@@ -61,11 +61,6 @@ jobs:
           metadata = {'versionName': os.environ['PATIENT_VERSION_NAME'], 'versionCode': int(os.environ['PATIENT_VERSION_CODE']), 'sizeBytes': apk.stat().st_size, 'sha256': hashlib.sha256(apk.read_bytes()).hexdigest()}
           apk.with_name('patient-app.json').write_text(json.dumps(metadata, indent=2) + '\n')
           PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: MediCluster-Patient-Android
-          path: medicluster/frontend/public/downloads/
-          retention-days: 30
       - name: Publish installer to website source
         run: |
           git config user.name 'github-actions[bot]'
