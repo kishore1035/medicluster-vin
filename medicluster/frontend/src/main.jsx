@@ -10,6 +10,7 @@ import "./installPrompt";
 // The intro plays once per browser session.
 const SPLASH_KEY = "medicluster.seenSplash";
 function shouldShowSplash() {
+  if (["/", "/download"].includes(window.location.pathname)) return false;
   try { return !sessionStorage.getItem(SPLASH_KEY); } catch { return true; }
 }
 

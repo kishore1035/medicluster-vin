@@ -155,6 +155,7 @@ export default function LoginPage() {
             )}
           </p>
           <AccessGuide current="clinician" className="lg:hidden mt-4" />
+          <a href="/download" className="text-[13px] text-slate-600 underline underline-offset-4">Explore MediCluster apps</a>
 
           {install && (
             <button type="button" onClick={install} className="btn-secondary h-10 text-[13px]">

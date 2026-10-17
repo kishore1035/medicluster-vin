@@ -105,10 +105,15 @@ Set backend secrets in the hosting provider, including `MONGO_URI`, `JWT_SECRET`
 and optional Ollama provider credentials. Point `ML_ENGINE_URL` to the deployed ML
 service. Docker containers use the hosting provider's `PORT` variable.
 
-Frontend environment variables are embedded at build time. The MediCluster
-frontend reads `VITE_DISPATCH_URL`; its current Dockerfile needs a corresponding
-build argument before that variable can configure deployed navigation. The dispatch
-Dockerfile similarly needs a `VITE_MEDICLUSTER_URL` build argument for its return links.
+Frontend environment variables are embedded at build time. Set `VITE_DISPATCH_URL`
+to the dispatch website URL on the MediCluster service, then rebuild; its Dockerfile
+passes this public setting to Vite. The dispatch Dockerfile still needs a
+`VITE_MEDICLUSTER_URL` build argument for its return links.
+
+The public homepage and `/download` offer role-specific web entry points and the
+signed patient Android installer. Signed-in clinicians retain their existing home
+dashboard. Until `VITE_DISPATCH_URL` is configured, dispatch and crew entries show
+Coming soon instead of sending visitors to a local development server.
 
 Health endpoints: MediCluster `/api/health`, ML `/health`, and ML connectivity
 through the web service at `/api/health/ml`.

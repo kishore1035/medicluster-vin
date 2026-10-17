@@ -10,6 +10,8 @@ COPY frontend/ ./
 # Build-time public config (set in the Render dashboard; optional).
 ARG VITE_GOOGLE_MAPS_KEY=""
 ENV VITE_GOOGLE_MAPS_KEY=$VITE_GOOGLE_MAPS_KEY
+ARG VITE_DISPATCH_URL=""
+ENV VITE_DISPATCH_URL=$VITE_DISPATCH_URL
 RUN npm run build
 
 # ── API + static server ──────────────────────────────────────────────────────
