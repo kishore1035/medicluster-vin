@@ -1030,211 +1030,61 @@
 }
 .mc-clinical {
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-  align-items: center;
-  gap: clamp(48px, 5.6vw, 100px);
-  padding-block: 35px 120px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(50px, 8vw, 140px);
+  align-items: start;
+  padding-block: 45px 120px;
   scroll-margin-top: 120px;
 }
-.mc-clinical-copy {
-  min-width: 0;
-}
 .mc-clinical-copy .mc-section-label {
-  color: #78866a;
+  color: #79846c;
   margin-bottom: 25px;
 }
 .mc-clinical h2 {
   font-family: var(--mc-sans);
-  font-weight: 500 !important;
-  font-size: clamp(42px, 4.1vw, 72px);
-  line-height: 1.08;
+  font-size: clamp(40px, 4vw, 65px);
+  line-height: 1.1;
   letter-spacing: -0.05em;
   margin: 0 0 27px;
 }
-.mc-clinical h2 em {
-  color: #a85f3f;
-}
 .mc-clinical-copy .mc-body {
-  max-width: 430px;
-  margin-bottom: 30px;
+  max-width: 420px;
+  font-size: 17px;
+  margin-bottom: 25px;
 }
-.mc-clinical-cta {
-  min-height: 52px;
-  font-size: 15px;
-  padding-inline: 24px;
-}
-.mc-clinical-steps {
+.mc-clinical-workflow {
   list-style: none;
   padding: 0;
-  margin: 38px 0 0;
-  max-width: 430px;
+  margin: 0;
 }
-.mc-clinical-steps li {
-  display: flex;
-  align-items: center;
-  gap: 23px;
-  border-top: 1px solid var(--download-line);
-  padding-block: 16px;
-  font-size: 15px;
+.mc-clinical-workflow li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 20px;
+  padding-block: 28px;
+  border-top: 1px solid #cdd3c4;
 }
-.mc-clinical-steps li:last-child {
-  border-bottom: 1px solid var(--download-line);
+.mc-clinical-workflow li:last-child {
+  border-bottom: 1px solid #cdd3c4;
 }
-.mc-clinical-steps li > span {
-  color: #b46545;
+.mc-workflow-number {
+  color: #8a937f;
   font-size: 12px;
-  padding-right: 20px;
-  border-right: 1px solid #d3d7ca;
+  line-height: 30px;
 }
-.mc-clinical-console {
-  min-width: 0;
-  background: #f8f7f3;
-  border: 1px solid #dcded4;
-  border-radius: 18px;
-  box-shadow: 0 20px 55px -35px #45503f50;
-  overflow: hidden;
+.mc-clinical-workflow h3 {
+  margin: 0 0 10px;
+  font-size: 23px;
+  line-height: 1.3;
+  letter-spacing: -0.025em;
 }
-.mc-console-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 17px 20px;
-  border-bottom: 1px solid #e1e3d9;
-}
-.mc-console-header > span:first-child {
-  display: inline-flex;
-  gap: 10px;
-  align-items: center;
-  font-size: 14px;
-  font-weight: 500;
-}
-.mc-console-header svg {
-  width: 23px;
-  height: 23px;
-}
-.mc-demo-label {
-  font-size: 10px;
-  color: #5e6953;
-  background: #ecefe5;
-  border: 1px solid #d6dccd;
-  padding: 6px 11px;
-  border-radius: 30px;
-  white-space: nowrap;
-}
-.mc-console-body {
-  padding: 16px;
-}
-.mc-method-tabs {
-  display: flex;
-  border: 1px solid #daddd1;
-  border-radius: 8px;
-  overflow: hidden;
-  margin: 0 0 16px;
-}
-.mc-method-tabs button {
-  flex: 1;
-  min-width: 0;
-  min-height: 42px;
-  padding: 8px 5px;
-  border: 0;
-  border-right: 1px solid #daddd1;
-  background: transparent;
-  color: var(--download-ink);
-  font-size: 12px;
-  cursor: pointer;
-}
-.mc-method-tabs button:last-child {
-  border-right: 0;
-}
-.mc-method-tabs button[aria-selected="true"] {
-  color: #fbfaf7;
-  background: #1e3328;
-}
-.mc-method-tabs button:focus-visible {
-  outline-offset: -4px;
-}
-.mc-map-panel {
-  background: #fdfcf9;
-  border: 1px solid #e0e2d8;
-  border-radius: 9px;
-}
-.mc-map-panel:focus-visible {
-  outline: 2px solid #ad633f;
-  outline-offset: 4px;
-}
-.mc-map-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-  align-items: baseline;
-  padding: 17px 18px 3px;
-}
-.mc-map-heading h3 {
+.mc-clinical-workflow p {
+  max-width: 440px;
   margin: 0;
   font-size: 15px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  line-height: 1.65;
+  color: #626d57;
 }
-.mc-map-heading > span {
-  color: #7b8075;
-  font-size: 10px;
-}
-.mc-population-map {
-  display: block;
-  width: 100%;
-  height: auto;
-  margin-top: 8px;
-  font-family: var(--mc-sans);
-  font-size: 14px;
-}
-.mc-population-map [data-cluster] {
-  transition: opacity 0.2s ease;
-}
-.mc-group-legend {
-  display: flex;
-  justify-content: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 0 12px 9px;
-}
-.mc-group-legend button {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 36px;
-  border: 1px solid transparent;
-  border-radius: 30px;
-  padding: 5px 8px;
-  font-size: 11px;
-  color: #68705f;
-  background: transparent;
-  cursor: pointer;
-}
-.mc-group-legend button:hover {
-  background: #f0f2e9;
-}
-.mc-group-legend button[aria-pressed="true"] {
-  border-color: #b5bda8;
-  background: #eff2e8;
-  color: #21331f;
-}
-.mc-group-legend i {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-.mc-method-description {
-  border-top: 1px solid #e1e3da;
-  padding-top: 13px;
-  margin: 0 17px 15px;
-  min-height: 43px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #65705b;
-}
-
 .mc-journey {
   position: relative;
   isolation: isolate;
@@ -1315,11 +1165,15 @@
 }
 .mc-get-started {
   position: relative;
-  min-height: max(760px, calc(100svh - 88px));
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+  min-height: max(980px, 110svh);
   overflow: hidden;
   isolation: isolate;
   background: #e4ebdc;
-  padding-block: 110px 150px;
+  padding-block: 110px 30px;
 }
 .mc-get-started-layout {
   display: grid;
@@ -1966,113 +1820,28 @@
   }
 }
 
-@media (max-width: 1000px) {
-  .mc-clinical {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    gap: 32px;
-  }
-  .mc-clinical h2 {
-    font-size: 43px;
-  }
-  .mc-console-body {
-    padding: 12px;
-  }
-  .mc-method-tabs button {
-    font-size: 10px;
-  }
-  .mc-console-header {
-    padding-inline: 14px;
-  }
-  .mc-console-header > span:first-child {
-    font-size: 12px;
-  }
-  .mc-demo-label {
-    font-size: 9px;
-    padding-inline: 8px;
-  }
-  .mc-map-heading {
-    padding-inline: 12px;
-  }
-  .mc-map-heading h3 {
-    font-size: 13px;
-  }
-  .mc-group-legend {
-    gap: 0;
-    padding-inline: 0;
-  }
-  .mc-group-legend button {
-    font-size: 10px;
-  }
-}
-@media (max-width: 760px) {
-  .mc-clinical {
-    grid-template-columns: minmax(0, 1fr);
-    padding-block: 10px 85px;
-    gap: 38px;
-  }
-  .mc-clinical h2 {
-    font-size: clamp(42px, 8.5vw, 62px);
-  }
-  .mc-clinical-copy .mc-body {
-    font-size: 16px;
-  }
-  .mc-clinical-steps {
-    margin-top: 28px;
-  }
-  .mc-clinical-console {
-    width: 100%;
-    max-width: 620px;
-    justify-self: center;
-  }
-  .mc-population-map {
-    height: auto;
-    font-size: 20px;
-  }
-  .mc-console-header {
-    padding: 16px 14px;
-  }
-  .mc-method-tabs {
-    margin-bottom: 12px;
-  }
-  .mc-method-tabs button {
-    min-height: 44px;
-  }
-  .mc-map-heading > span {
-    font-size: 9px;
-  }
-  .mc-clinical-cta {
-    font-size: 14px;
-  }
-  .mc-method-description {
-    margin-inline: 12px;
-    font-size: 11px;
-  }
-}
-
 .mc-cta-liquid {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  opacity: 0.78;
+  position: relative;
+  order: 1;
+  flex: none;
+  height: clamp(260px, 42vw, 900px);
+  width: 100%;
+  z-index: 0;
+  opacity: 0.95;
   pointer-events: none;
-}
-.mc-get-started::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    rgb(228 235 220 / 0.97),
-    rgb(228 235 220 / 0.65) 42%,
-    transparent 90%
-  );
 }
 .mc-cta-liquid .sh-root {
   pointer-events: none;
 }
 @media (max-width: 639px) {
+  .mc-get-started {
+    min-height: max(760px, 100svh);
+    padding-block: 75px 30px;
+    gap: 25px;
+  }
+  .mc-cta-liquid {
+    height: clamp(220px, 62vw, 340px);
+  }
   .download-apps {
     padding-block: 65px 55px;
   }
@@ -2113,5 +1882,26 @@
   .mc-application-options {
     font-size: 11px;
     gap: 7px;
+  }
+}
+
+@media (max-width: 760px) {
+  .mc-clinical {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 35px;
+    padding-block: 15px 80px;
+  }
+  .mc-clinical h2 {
+    font-size: clamp(39px, 8vw, 60px);
+  }
+  .mc-clinical-copy .mc-body {
+    font-size: 16px;
+  }
+  .mc-clinical-workflow h3 {
+    font-size: 21px;
+  }
+  .mc-clinical-workflow li {
+    padding-block: 24px;
+    gap: 12px;
   }
 }

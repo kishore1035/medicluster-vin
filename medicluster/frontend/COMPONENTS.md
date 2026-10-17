@@ -53,7 +53,8 @@ ping-pong simulation, instanced particles, static image pass and reusable layout
 `src/components/ui/demo.tsx` shows the standalone component with MediCluster copy.
 The supplied malformed newline literals are corrected to `\n`. Icons use Lucide.
 
-The homepage uses `backgroundOnly`, passing `heroRef` via `eventTargetRef`, so
+The closing “Your next step” section uses `backgroundOnly`, passing its section
+ref via `eventTargetRef`, so
 existing navigation, headline, app links and download controls stay semantic HTML.
 The component adds no duplicate title or navigation in this mode. It is decorative
 and hidden from assistive technology. Its parent softens the sculpture to keep
@@ -63,8 +64,9 @@ The homepage keeps motion state locally and passes `paused`. Pausing freezes GPU
 rendering. Reduced motion settles to a static image, pointer events do not disturb
 it, and leaving the viewport or hiding the tab stops animation. Without WebGL2,
 float framebuffers, or after context loss, the static sculpture remains visible.
-Desktop and mobile share a local landscape sculpture; the mobile scale allows it
-to extend past the sides without horizontal page overflow. Optional `mobileSrc`,
+Desktop and mobile share a local landscape sculpture. `sculptureFit="contain"`
+keeps the complete image inside its own tall stage on desktop, tablet and phone.
+Copy sits above that stage; the opening hero uses the floating care island. Optional `mobileSrc`,
 `darkSrc`, and `mobileDarkSrc` support dedicated images in other integrations.
 
 The provided sculpture is saved as `public/images/liquid-sculpture.webp` from the
@@ -89,45 +91,34 @@ already-installed `lucide-react`. The standalone supplied examples live in
 `src/components/ui/glass-folder-cards-demo.tsx` so the sculpture's existing
 `demo.tsx` is preserved.
 
-The product grid uses `src/components/download/ProductFolderCard.tsx`:
+`ProductFolderCard.tsx` remains an optional adapter for the reusable folder
+component. The public page instead uses `ApplicationSelector.tsx`, following
+the supplied horizontal pill reference. Its four application tabs share one
+action bar; arrow keys, Home and End switch tabs. Product navigation and direct
+`#patient`, `#crew` and other application links select the matching tab.
 
-- Four real product folders, with existing descriptions and web destinations.
-- `DownloadPage` controls the single open folder; each component owns its files.
-- Folder files link to web apps or installation help. The patient APK is a click
-  action through the existing verified downloader, never a navigable APK URL.
-- The outside download button shares that same downloader and in-flight lock.
-- Unconfigured services show a disabled Coming soon sheet, without fake links.
-- Production uses a More menu with real Open/Close and installation actions.
-  Adding files is available in the reusable component/demo, not the product grid.
-- Files are inert and outside the tab order while closed. Enter/Space toggles the
-  folder; Escape closes and restores focus. Arrow keys, Home and End drive menus.
-- Desktop uses four columns, intermediate screens two, and phones one. A
-  ResizeObserver scales the folder geometry to its available width.
-- Global pause and reduced motion suppress folder animation and pointer tilt.
-
-The supplied component reads its initial `files` once. The patient folder is
-keyed by release checksum so newly fetched release metadata refreshes its files.
-To manage ordinary documents, use `onAdd` and `onFilesChange`; to run a product
-file action, use `onFileSelect`. Use the optional `image` and per-file `image`
-props only when replacing generated artwork with a real image is intentional.
+The selected application opens its real configured web destination. Only the
+Patient tab offers Android download and installation help. Downloads use the
+existing checksum-verified POST helper and in-flight lock, never a navigable APK
+URL or automatic retry. Unconfigured workspaces show Coming soon. On phones
+the application tabs form two columns. The selector needs no new dependency or
+context provider. Shared application and release types live in `appTypes.ts`.
 
 ## Full public website
 
 `DownloadPage` now composes nine sections: the split hero, care story, cinematic
-clinic scene, role-based apps, patient preview, clinical preview, getting-started
+clinic scene, role-based apps, patient preview, clinical workflow, getting-started
 journey, closing call to action, and FAQ. The footer provides workspace and
 installation links. The local `/home/vinay/yuva-garden-next` reference informed
 the editorial pacing, Hanken Grotesk/Bodoni Moda typography, scroll zoom and
 large closing wordmark; no garden content or runtime dependency is copied.
 
 `LandingSections.tsx` holds the semantic sections and patient preview state.
-`ClinicalSpotlight.tsx` owns the compact clinical preview, keyboard-accessible
-method tabs and group-focus controls. Its hierarchy diagram, density outlines,
-centroid markers and mixture overlaps illustrate the selected method without
-using real patient data. Its heading uses the existing sans face, with one
-terracotta serif accent, and the preview stays beside the copy on desktop.
-Patient feature selectors change the phone preview; clinical tabs change an
-explicitly illustrative cluster diagram. Neither preview displays patient data.
+`ClinicalSpotlight.tsx` describes the actual CSV upload, method selection and
+results-review workflow, based on the existing UploadPanel and DashboardPage.
+It contains no invented chart, sample results or imitation dashboard. The
+clinician link opens the existing login flow. Patient feature selectors change
+the phone preview, which contains no patient data.
 `SiteMotion.tsx` uses passive scroll events, one scheduled animation frame,
 IntersectionObserver and ResizeObserver. The global pause control and reduced
 motion preference also disable the scroll effects and reveal transitions.
@@ -135,7 +126,7 @@ motion preference also disable the scroll effects and reveal transitions.
 Three generated photographic assets are hosted locally as WebP files in
 `public/images`: `care-conversation.webp`, `care-corridor.webp`, and
 `patient-preview-scene.webp`. Together they total about 403 KB. Text, controls,
-phone UI and charts remain native elements. Hero media loads eagerly; downstream
+and phone UI remain native elements. Hero media loads eagerly; downstream
 media loads lazily. All marketing styles remain scoped to `.download-portal`.
 
 The hero now uses `CareArtifact.tsx` and a transparent `care-island.webp` instead

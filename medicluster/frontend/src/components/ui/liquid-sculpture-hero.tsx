@@ -1058,6 +1058,8 @@ export interface SculptureHeroProps {
   bodyFont?: string;
   loadFonts?: boolean;
   sculptureScale?: number;
+  /** Keep the full sculpture inside the stage, including on tablets. */
+  sculptureFit?: "natural" | "contain";
   mobileSculptureScale?: number;
   sculptureX?: number;
   sculptureY?: number;
@@ -1255,6 +1257,7 @@ export default function SculptureHero(props: SculptureHeroProps) {
     bodyFont = DEFAULTS.bodyFont,
     loadFonts = true,
     sculptureScale = 1,
+    sculptureFit = "natural",
     mobileSculptureScale = 1,
     sculptureX = 0,
     sculptureY = 0,
@@ -1297,12 +1300,14 @@ export default function SculptureHero(props: SculptureHeroProps) {
     [mode, setMode] = React.useState<"light" | "dark">(theme);
   const layout = React.useRef({
     scale: sculptureScale,
+    fit: sculptureFit,
     mobileScale: mobileSculptureScale,
     x: sculptureX,
     y: sculptureY,
   });
   layout.current = {
     scale: clamp(sculptureScale, 0.3, 3),
+    fit: sculptureFit,
     mobileScale: clamp(mobileSculptureScale, 0.3, 3),
     x: sculptureX,
     y: sculptureY,
@@ -1375,6 +1380,20 @@ export default function SculptureHero(props: SculptureHeroProps) {
       bd = backdropRef.current,
       img = imgRef.current,
       hintEl = hintRef.current;
+    if (layout.current.fit === "contain") {
+      const inset = Math.min(16, w / 20, h / 20);
+      const factor = Math.min(
+        1,
+        (w - inset * 2) / rect.w,
+        (h - inset * 2) / rect.h,
+      );
+      const width = rect.w * factor;
+      const height = rect.h * factor;
+      rect.x = clamp(rect.x + (rect.w - width) / 2, inset, w - width - inset);
+      rect.y = clamp(rect.y + (rect.h - height) / 2, inset, h - height - inset);
+      rect.w = width;
+      rect.h = height;
+    }
     if (bd) {
       const chars = Math.max(1, (bd.textContent || "").length);
       bd.style.fontSize =
@@ -1557,6 +1576,7 @@ export default function SculptureHero(props: SculptureHeroProps) {
   ]);
   React.useEffect(relayout, [
     sculptureScale,
+    sculptureFit,
     mobileSculptureScale,
     sculptureX,
     sculptureY,
