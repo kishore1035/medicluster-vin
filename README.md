@@ -9,6 +9,7 @@ medicluster/
   frontend/       React clinician dashboard and patient app (/app)
   backend/        Express API, MongoDB models, staff and patient authentication
   ml-engine/      Flask clustering, risk analysis, imaging, NLP and forecasting
+  patient-android/ Native patient-only Android APK and build instructions
   Dockerfile      Combined frontend/backend deployment
   docker-compose.yml
 ambulance-dispatch/

@@ -1,0 +1,51 @@
+plugins { id 'com.android.application' }
+
+def patientOrigin = System.getenv('PATIENT_APP_ORIGIN') ?: 'https://medicluster-wiu3.onrender.com'
+def origin = new URI(patientOrigin)
+if (origin.scheme != 'https' || !origin.host || origin.rawUserInfo || origin.rawQuery || origin.rawFragment || (origin.rawPath && origin.rawPath != '/') || (origin.port != -1 && origin.port != 443)) {
+    throw new GradleException('PATIENT_APP_ORIGIN must be an HTTPS origin without a path or credentials')
+}
+patientOrigin = patientOrigin.replaceAll('/+$', '')
+def hasSigningKey = System.getenv('PATIENT_KEYSTORE_PATH') != null
+
+android {
+    namespace 'com.medicluster.patient'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.medicluster.patient'
+        minSdk 26
+        targetSdk 35
+        versionCode Integer.parseInt(System.getenv('PATIENT_VERSION_CODE') ?: '1')
+        versionName System.getenv('PATIENT_VERSION_NAME') ?: '1.0.0'
+        buildConfigField 'String', 'PATIENT_ORIGIN', '"' + patientOrigin + '"'
+    }
+    buildFeatures { buildConfig true }
+    signingConfigs {
+        if (hasSigningKey) {
+            release {
+                storeFile file(System.getenv('PATIENT_KEYSTORE_PATH'))
+                storePassword System.getenv('PATIENT_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('PATIENT_KEY_ALIAS')
+                keyPassword System.getenv('PATIENT_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (hasSigningKey) signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    if (!hasSigningKey && graph.allTasks.any { it.name == 'packageRelease' }) {
+        throw new GradleException('Release APK requires PATIENT_KEYSTORE_PATH and signing credentials')
+    }
+}
+
+dependencies { testImplementation 'junit:junit:4.13.2' }

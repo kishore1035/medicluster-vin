@@ -14,6 +14,7 @@ import EmergencyScreen from "./screens/EmergencyScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import ReminderAlert from "./ReminderAlert";
 import LoginScreen from "./screens/LoginScreen";
+import { isPatientAndroid } from "./patientPlatform";
 
 const PatientContext = createContext(null);
 export const usePatient = () => useContext(PatientContext);
@@ -178,6 +179,9 @@ function AppRoutes() {
 
 /** Full-screen on phones; a 390×844 device frame on larger screens. */
 function PhoneFrame({ children }) {
+  if (isPatientAndroid()) {
+    return <div className="h-[100dvh] w-full bg-paper text-ink overflow-hidden flex flex-col">{children}</div>;
+  }
   return (
     <div className="min-h-[100dvh] bg-[#e4e1da] flex items-center justify-center sm:py-8">
       <div className="relative w-full h-[100dvh] sm:w-[390px] sm:h-[844px] sm:rounded-[44px] sm:border-[10px] sm:border-ink bg-paper text-ink overflow-hidden flex flex-col">

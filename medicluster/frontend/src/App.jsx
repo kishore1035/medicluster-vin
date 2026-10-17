@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import AppShell from "./components/AppShell";
 import HomePage from "./pages/HomePage";
 import AlertsPage from "./pages/AlertsPage";
@@ -18,9 +18,14 @@ import PatientApp from "./patient-app/PatientApp";
 import LoginPage from "./pages/LoginPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import { RequireAuth } from "./auth/AuthContext";
+import { isPatientAndroid } from "./patient-app/patientPlatform";
 
 export default function App() {
   const { pathname } = useLocation();
+
+  if (isPatientAndroid() && pathname !== "/app" && !pathname.startsWith("/app/")) {
+    return <Navigate to="/app" replace />;
+  }
 
   // The patient app is a self-contained phone UI with its own navigation.
   if (pathname === "/app" || pathname.startsWith("/app/")) {

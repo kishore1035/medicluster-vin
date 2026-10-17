@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { usePatient } from "../PatientApp";
 import { Body, ListHeader, TopBar, ErrorNote } from "../ui";
+import PatientDownload from "../PatientDownload";
+import { isPatientAndroid } from "../patientPlatform";
 
 const field = "h-11 px-3 border border-line-strong rounded bg-surface text-sm focus:outline-none focus:border-ink w-full";
 
@@ -118,8 +120,9 @@ export default function ProfileScreen() {
           </button>
           <div className="flex justify-between text-[13px]">
             <button type="button" onClick={signOut} className="text-blue-600">Sign out</button>
-            <Link to="/" className="text-blue-600">Clinician app</Link>
+            {!isPatientAndroid() && <Link to="/" className="text-blue-600">Clinician app</Link>}
           </div>
+          <PatientDownload />
         </form>
       </Body>
     </>
