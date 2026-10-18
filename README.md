@@ -123,6 +123,24 @@ Set `VITE_DISPATCH_URL` to override the dispatch website URL, then rebuild; the
 MediCluster Dockerfile passes this public setting to Vite. The dispatch Dockerfile still needs a
 `VITE_MEDICLUSTER_URL` build argument for its return links.
 
+### Separate Render frontend and backend
+
+For the MediCluster backend Node web service, use root `medicluster/backend`,
+build command `npm ci`, and start command `npm start`. Keep its Supabase,
+JWT, delivery-provider settings, and deployed `ML_ENGINE_URL` configured.
+
+For the separate frontend Node web service, use root `medicluster/frontend`,
+build command `npm ci && npm run build`, and start command `npm start`.
+Set runtime `BACKEND_URL=https://medicluster-backend.onrender.com` to the actual
+backend origin. The frontend production server serves `dist` and forwards `/api`
+requests to that backend, including Google callback cookies and APK downloads.
+Do not use `serve -s dist` for this setup: it does not forward API requests.
+
+On the backend, set `PATIENT_PUBLIC_ORIGIN` and `CORS_ORIGINS` to the frontend
+HTTPS origin. Google OAuth's authorized redirect URI is
+`<frontend-origin>/api/patient-auth/google/callback`. Check `/api/health` through
+the frontend URL to verify both services and the database together.
+
 The public homepage and `/download` offer role-specific web entry points and the
 signed patient Android installer. Signed-in clinicians retain their existing home
 dashboard. Dispatch and crew entries open their separate login routes on the deployed

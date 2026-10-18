@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "start": "node server.js",
     "test": "node --test tests/*.test.js",
     "dev": "vite --port 3000",
     "build": "vite build",
@@ -15,7 +16,9 @@
     "axios": "^1.6.7",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
+    "express": "^4.22.3",
     "html2canvas": "^1.4.1",
+    "http-proxy-middleware": "^3.0.7",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.59.0",
