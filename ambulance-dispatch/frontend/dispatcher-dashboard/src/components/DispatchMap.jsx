@@ -9,32 +9,7 @@ import NearMeIcon from '@mui/icons-material/NearMe';
 import AltRouteIcon from '@mui/icons-material/AltRoute';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
-// CARTO Voyager High-DPI Style (Google Maps-like vector street design, road hierarchy, POIs)
-const CARTO_VOYAGER_STYLE = {
-  version: 8,
-  sources: {
-    'carto-voyager': {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-      ],
-      tileSize: 256,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    },
-  },
-  layers: [
-    {
-      id: 'carto-voyager-layer',
-      type: 'raster',
-      source: 'carto-voyager',
-      minzoom: 0,
-      maxzoom: 22,
-    },
-  ],
-};
+import { STREET_MAP_STYLE } from '../services/mapStyle';
 
 const BENGALURU_LNG_LAT = [77.5946, 12.9716]; // [lng, lat] Central Bengaluru
 
@@ -428,12 +403,12 @@ export default function DispatchMap({
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: CARTO_VOYAGER_STYLE,
+      style: STREET_MAP_STYLE,
       center: BENGALURU_LNG_LAT,
       zoom: 12,
       pitch: 0,
       bearing: 0,
-      attributionControl: true,
+      attributionControl: { compact: false },
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true }), 'bottom-right');

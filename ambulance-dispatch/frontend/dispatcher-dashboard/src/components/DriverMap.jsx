@@ -3,32 +3,7 @@ import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Box, Typography, Chip } from '@mui/material';
 
-// CARTO Voyager High-DPI Style (Google Maps-like vector street design)
-const CARTO_VOYAGER_STYLE = {
-  version: 8,
-  sources: {
-    'carto-voyager': {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-      ],
-      tileSize: 256,
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-    },
-  },
-  layers: [
-    {
-      id: 'carto-voyager-layer',
-      type: 'raster',
-      source: 'carto-voyager',
-      minzoom: 0,
-      maxzoom: 22,
-    },
-  ],
-};
+import { STREET_MAP_STYLE } from '../services/mapStyle';
 
 /* ── DOM Marker Generators ── */
 function createDriverMarkerElement() {
@@ -101,12 +76,12 @@ export default function DriverMap({ driverPos, incident, missionStatus, hospital
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: CARTO_VOYAGER_STYLE,
+      style: STREET_MAP_STYLE,
       center: initialLngLat,
       zoom: 15,
       pitch: 35,
       bearing: 0,
-      attributionControl: false,
+      attributionControl: { compact: false },
     });
 
     map.on('load', () => {
