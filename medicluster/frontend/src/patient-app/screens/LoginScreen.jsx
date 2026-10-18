@@ -4,7 +4,6 @@ import {
   requestPatientEmailCode, verifyPatientEmailCode, exchangePatientGoogleCode,
 } from "../../api/apiClient";
 import Logo from "../../components/Logo";
-import AccessGuide from "../../components/AccessGuide";
 import PatientDownload from "../PatientDownload";
 import { isPatientAndroid } from "../patientPlatform";
 import { createGoogleHandoff, createGoogleCallbackTask, googleAuthError, subscribeGoogleSignInRecovery } from "../patientAuth";
@@ -219,10 +218,7 @@ export default function LoginScreen({ onSignedIn }) {
           {isEmail ? "Use the email your clinic linked to your records. We’ll send a 6-digit code." : "We’ll text a 6-digit code to this number. Your clinic links your records to it."}
         </span>
       </div>
-      {!isPatientAndroid() && <>
-        <PatientDownload />
-        <AccessGuide current="patient" className="mt-4" />
-      </>}
+      {!isPatientAndroid() && <PatientDownload />}
     </form>
   );
 }

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Logo from "../components/Logo";
-import AccessGuide from "../components/AccessGuide";
 import { useInstallPrompt } from "../installPrompt";
 
 export function Field({ label, aside, id, ...input }) {
@@ -83,7 +82,6 @@ export default function LoginPage() {
             Upload patient vitals, run unsupervised clustering, and instantly identify at-risk
             populations — no labels, no manual review.
           </p>
-          <AccessGuide current="clinician" dark className="max-w-[440px] mt-2" />
         </div>
         <span className="font-mono text-[11px] text-[#8a8c8e]">HIPAA-aligned · Data stays in your region</span>
       </aside>
@@ -154,7 +152,6 @@ export default function LoginPage() {
               <>Already have an account? <a href="#" className={linkCls} onClick={switchMode("signin")}>Sign in</a></>
             )}
           </p>
-          <AccessGuide current="clinician" className="lg:hidden mt-4" />
           <a href="/download" className="text-[13px] text-slate-600 underline underline-offset-4">Explore MediCluster apps</a>
 
           {install && (

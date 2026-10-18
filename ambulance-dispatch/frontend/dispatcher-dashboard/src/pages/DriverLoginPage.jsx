@@ -5,7 +5,6 @@ import supabase from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useAmbulances } from '../hooks/useData';
 import MobileFrame from '../components/MobileFrame';
-import AccessGuide from '../components/AccessGuide';
 import { mobileVars } from '../theme/mobile';
 import { EMPLOYEE_KEY, SHIFT_KEY, VEHICLE_KEY, startDriverShift } from '../services/driverSession';
 
@@ -132,7 +131,6 @@ export default function DriverLoginPage() {
             Location sharing with dispatch turns on when your shift starts and stops when you go off duty.
           </Box>
         </Box>
-        <AccessGuide current="crew" sx={{ mt: 2 }} />
       </Box>
     </MobileFrame>
   );
