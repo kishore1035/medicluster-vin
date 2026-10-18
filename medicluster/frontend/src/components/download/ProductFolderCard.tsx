@@ -4,7 +4,7 @@ import GlassFolder, {
   type ArtPreset,
   type FolderFile,
 } from "@/components/ui/glass-folder-cards";
-import { createPatientDownloader } from "@/patient-app/patientDownload";
+import { createAndroidDownloader } from "@/patient-app/patientDownload";
 import type { ProductApp, PatientRelease } from "./appTypes";
 export type { ProductApp, PatientRelease } from "./appTypes";
 const ART: Record<
@@ -25,7 +25,7 @@ export function productFolderFiles(
   if (app.webHref)
     files.push({
       name: "Open web app",
-      meta: app.android ? "Patient portal" : "Web app",
+      meta: app.id === "patient" ? "Patient portal" : app.id === "crew" ? "Crew workspace" : "Web app",
       art: ART[app.id]?.art ?? "aurora",
       href: app.webHref,
     });
@@ -35,13 +35,13 @@ export function productFolderFiles(
       meta: `v${release.versionName}`,
       art: "aurora",
     });
-  if (app.webHref)
+  if (app.webHref || (app.android && release))
     files.push({
       name: "How to install",
       meta: "Getting started",
       href: "#install",
     });
-  if (!app.webHref)
+  if (!app.webHref && !(app.android && release))
     files.push({
       name: "Coming soon",
       meta: "Not available yet",
@@ -68,10 +68,10 @@ export default function ProductFolderCard({
   index: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const downloader = useRef<ReturnType<typeof createPatientDownloader> | null>(
+  const downloader = useRef<ReturnType<typeof createAndroidDownloader> | null>(
     null,
   );
-  if (!downloader.current) downloader.current = createPatientDownloader();
+  if (app.android && !downloader.current) downloader.current = createAndroidDownloader(app.id);
   const [width, setWidth] = useState(340);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -154,7 +154,7 @@ export default function ProductFolderCard({
                 disabled={busy}
                 aria-busy={busy}
                 onClick={() => void download()}
-                aria-label="Download Patient app for Android"
+                aria-label={`Download ${app.name} for Android`}
               >
                 {busy ? "Preparing download…" : "Download Android"}
               </button>

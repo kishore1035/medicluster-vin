@@ -8,7 +8,7 @@ import {
   RadioTower,
   Stethoscope,
 } from "lucide-react";
-import { createPatientDownloader } from "@/patient-app/patientDownload";
+import { createAndroidDownloader } from "@/patient-app/patientDownload";
 import type { PatientRelease, ProductApp } from "./appTypes";
 
 const ICONS = {
@@ -21,19 +21,17 @@ const ICONS = {
 export default function ApplicationSelector({
   apps,
   release,
+  crewRelease = null,
   onInstall,
+  onSelect,
 }: {
   apps: ProductApp[];
   release: PatientRelease | null;
-  onInstall: () => void;
+  crewRelease?: PatientRelease | null;
+  onInstall: (id: string) => void;
+  onSelect?: (id: string) => void;
 }) {
   const [selected, setSelected] = useState(apps[0]?.id ?? "");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const downloader = useRef<ReturnType<typeof createPatientDownloader> | null>(
-    null,
-  );
-  if (!downloader.current) downloader.current = createPatientDownloader();
   const current = apps.find((app) => app.id === selected) ?? apps[0];
 
   useEffect(() => {
@@ -41,7 +39,7 @@ export default function ApplicationSelector({
       const id = hash.slice(1);
       if (apps.some((app) => app.id === id)) {
         setSelected(id);
-        setError("");
+        onSelect?.(id);
       }
     };
     const onHash = () => selectAnchor(location.hash);
@@ -57,29 +55,13 @@ export default function ApplicationSelector({
       removeEventListener("hashchange", onHash);
       document.removeEventListener("click", onLink);
     };
-  }, [apps]);
+  }, [apps, onSelect]);
 
   if (!current) return null;
   const select = (id: string, focus = false) => {
     setSelected(id);
-    setError("");
+    onSelect?.(id);
     if (focus) document.getElementById(id)?.focus();
-  };
-  const download = async () => {
-    if (!release || busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      await downloader.current!(release);
-    } catch (cause) {
-      setError(
-        cause instanceof Error && cause.message.startsWith("Download ")
-          ? cause.message
-          : "Download failed. Please try again.",
-      );
-    } finally {
-      setBusy(false);
-    }
   };
 
   return (
@@ -129,72 +111,119 @@ export default function ApplicationSelector({
         })}
       </div>
       {apps.map((app) => (
-        <div
+        <ApplicationPanel
           key={app.id}
-          id={`application-panel-${app.id}`}
-          role="tabpanel"
-          aria-labelledby={app.id}
-          hidden={app.id !== current.id}
-        >
-          <div className="mc-application-action">
-            <p>{app.description}</p>
-            {app.webHref ? (
-              <a
-                className="download-pill download-pill-dark"
-                href={app.webHref}
-                aria-label={`Open ${app.name} web app`}
-              >
-                Open web app <ArrowUpRight size={16} aria-hidden="true" />
-              </a>
-            ) : (
-              <span className="mc-application-unavailable">Coming soon</span>
-            )}
-          </div>
-          <div className="mc-application-options">
-            {app.android ? (
-              <>
-                {release ? (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    aria-busy={busy}
-                    onClick={() => void download()}
-                    aria-label="Download Patient app for Android"
-                  >
-                    <Download size={14} aria-hidden="true" />
-                    {busy ? "Preparing download…" : "Download Android"}
-                  </button>
-                ) : (
-                  <span>Android download unavailable</span>
-                )}
-                <span aria-hidden="true">·</span>
-                <button type="button" onClick={onInstall}>
-                  Installation guide
-                </button>
-              </>
-            ) : (
-              <span>
-                {app.webHref
-                  ? "Web app · Opens in your browser"
-                  : "This workspace isn’t available yet."}
-              </span>
-            )}
-          </div>
-          {app.android && busy && (
-            <p className="mc-application-feedback" role="status">
-              Preparing your verified download…
-            </p>
-          )}
-          {app.android && error && (
-            <p
-              className="mc-application-feedback mc-application-error"
-              role="alert"
-            >
-              {error}
-            </p>
-          )}
-        </div>
+          app={app}
+          selected={current.id === app.id}
+          release={app.id === "patient" ? release : app.id === "crew" ? crewRelease : null}
+          onInstall={() => onInstall(app.id)}
+        />
       ))}
+    </div>
+  );
+}
+
+function ApplicationPanel({
+  app,
+  selected,
+  release,
+  onInstall,
+}: {
+  app: ProductApp;
+  selected: boolean;
+  release: PatientRelease | null;
+  onInstall: () => void;
+}) {
+  // Each mounted role keeps its own in-flight request, feedback and release.
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const pending = useRef(false);
+  const downloader = useRef<ReturnType<typeof createAndroidDownloader> | null>(null);
+  if (app.android && !downloader.current) {
+    downloader.current = createAndroidDownloader(app.id);
+  }
+  const download = async () => {
+    if (!release || pending.current) return;
+    pending.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      await downloader.current!(release);
+    } catch (cause) {
+      setError(
+        cause instanceof Error && cause.message.startsWith("Download ")
+          ? cause.message
+          : "Download failed. Please try again.",
+      );
+    } finally {
+      pending.current = false;
+      setBusy(false);
+    }
+  };
+  const androidAction = (primary = false) => release ? (
+    <button
+      type="button"
+      className={primary ? "download-pill download-pill-dark" : undefined}
+      disabled={busy}
+      aria-busy={busy}
+      onClick={() => void download()}
+      aria-label={`Download ${app.name} for Android`}
+    >
+      <Download size={primary ? 16 : 14} aria-hidden="true" />
+      {busy ? "Preparing download…" : "Download Android"}
+    </button>
+  ) : (
+    <span className="mc-application-unavailable">Android download unavailable</span>
+  );
+  const webAction = (primary = false) => app.webHref ? (
+    <a
+      className={primary ? "download-pill download-pill-dark" : undefined}
+      href={app.webHref}
+      aria-label={`Open ${app.name} web app`}
+    >
+      Open web app <ArrowUpRight size={16} aria-hidden="true" />
+    </a>
+  ) : (
+    <span className="mc-application-unavailable">Coming soon</span>
+  );
+
+  return (
+    <div
+      id={`application-panel-${app.id}`}
+      role="tabpanel"
+      aria-labelledby={app.id}
+      hidden={!selected}
+    >
+      <div className="mc-application-action">
+        <p>{app.description}</p>
+        {app.id === "crew" ? androidAction(true) : webAction(true)}
+      </div>
+      <div className="mc-application-options">
+        {app.android ? (
+          <>
+            {app.id === "crew" ? (app.webHref && webAction()) : androidAction()}
+            {(app.id !== "crew" || app.webHref) && <span aria-hidden="true">·</span>}
+            <button type="button" onClick={onInstall}>Installation guide</button>
+          </>
+        ) : (
+          <span>{app.webHref ? "Web app · Opens in your browser" : "This workspace isn’t available yet."}</span>
+        )}
+      </div>
+      {app.android && release && (
+        <p className="mc-application-feedback">
+          Version {release.versionName} · {Math.ceil(release.sizeBytes / 1024)} KB · Android 8.0+
+        </p>
+      )}
+      {busy && (
+        <p className="mc-application-feedback" role="status">
+          Preparing your verified download…
+        </p>
+      )}
+      {error && (
+        <p className="mc-application-feedback mc-application-error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

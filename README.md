@@ -10,6 +10,7 @@ medicluster/
   backend/        Express API, MongoDB models, staff and patient authentication
   ml-engine/      Flask clustering, risk analysis, imaging, NLP and forecasting
   patient-android/ Native patient-only Android APK and build instructions
+  crew-android/    Native crew-only Android APK and build instructions
   Dockerfile      Combined frontend/backend deployment
   docker-compose.yml
 ambulance-dispatch/
@@ -84,6 +85,12 @@ cd ambulance-dispatch/frontend/dispatcher-dashboard
 npm ci
 npm run dev
 ```
+
+The **Crew app** card at `/download#crew` offers a signed Android 8.0+ APK,
+with the web workspace as a secondary option. It opens the deployed employee-ID/PIN
+workflow in a dedicated Android app. See [Crew Android setup](medicluster/crew-android/README.md)
+for signing and build instructions. Internet is required; GPS works while using
+the app. Installing it does not provision a Supabase account.
 
 Open `http://localhost:5174/#/login` for dispatchers or
 `http://localhost:5174/#/driver/login` for crews. Crew sign-in uses an employee ID

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUpRight,
@@ -29,6 +29,7 @@ import {
   PATIENT_RELEASE_PATH,
   readPatientRelease,
 } from "../patient-app/patientPlatform";
+import { CREW_RELEASE_PATH, readCrewRelease } from "../crew-app/crewPlatform";
 import "./download-page.css";
 
 const APPS = buildAppCatalog(DISPATCH_URL, { allowLocal: import.meta.env.DEV });
@@ -44,6 +45,11 @@ export default function DownloadPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
   const [release, setRelease] = useState(null);
+  const [crewRelease, setCrewRelease] = useState(null);
+  const [installApp, setInstallApp] = useState("patient");
+  const selectApp = useCallback((id) => {
+    if (id === "patient" || id === "crew") setInstallApp(id);
+  }, []);
   const rootRef = useRef(null);
   const headerRef = useRef(null);
   const productsRef = useRef(null);
@@ -51,15 +57,17 @@ export default function DownloadPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(PATIENT_RELEASE_PATH, {
-      signal: controller.signal,
-      cache: "no-store",
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!controller.signal.aborted) setRelease(readPatientRelease(data));
-      })
-      .catch(() => {});
+    for (const [path, readRelease, publish] of [
+      [PATIENT_RELEASE_PATH, readPatientRelease, setRelease],
+      [CREW_RELEASE_PATH, readCrewRelease, setCrewRelease],
+    ]) {
+      fetch(path, { signal: controller.signal, cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!controller.signal.aborted) publish(readRelease(data));
+        })
+        .catch(() => {});
+    }
     return () => controller.abort();
   }, []);
   useEffect(() => {
@@ -80,7 +88,8 @@ export default function DownloadPage() {
       document.removeEventListener("keydown", escape);
     };
   }, [menuOpen]);
-  const showInstall = () => {
+  const showInstall = (id) => {
+    selectApp(id);
     setInstallOpen(true);
     requestAnimationFrame(() =>
       document.getElementById("install")?.scrollIntoView({
@@ -301,6 +310,8 @@ export default function DownloadPage() {
             <ApplicationSelector
               apps={APPS}
               release={release}
+              crewRelease={crewRelease}
+              onSelect={selectApp}
               onInstall={showInstall}
             />
           </div>
@@ -311,11 +322,13 @@ export default function DownloadPage() {
         <GetStarted paused={motionPaused} />
         <LandingFAQ
           release={release}
+          crewRelease={crewRelease}
+          installApp={installApp}
           installOpen={installOpen}
           setInstallOpen={setInstallOpen}
         />
       </main>
-      <LandingFooter onInstall={showInstall} />
+      <LandingFooter onInstall={() => showInstall()} />
     </div>
   );
 }

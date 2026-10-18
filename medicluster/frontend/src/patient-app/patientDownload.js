@@ -1,21 +1,28 @@
-function savePatientBlob(blob) {
+function saveAndroidBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'MediCluster-Patient.apk';
+  link.download = filename;
   document.body.append(link);
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-export function createPatientDownloader({ fetchImpl = globalThis.fetch, saveBlob = savePatientBlob } = {}) {
+const INSTALLERS = {
+  patient: { endpoint: '/api/patient-installer', filename: 'MediCluster-Patient.apk' },
+  crew: { endpoint: '/api/crew-installer', filename: 'MediCluster-Crew.apk' },
+};
+
+export function createAndroidDownloader(appId, { fetchImpl = globalThis.fetch, saveBlob = saveAndroidBlob } = {}) {
+  if (!Object.hasOwn(INSTALLERS, appId)) throw new Error('Unsupported Android app.');
+  const installer = INSTALLERS[appId];
   let pending = false;
   return async (release) => {
     if (pending) return false;
     pending = true;
     try {
-      const response = await fetchImpl('/api/patient-installer', {
+      const response = await fetchImpl(installer.endpoint, {
         method: 'POST', cache: 'no-store', redirect: 'error',
         signal: AbortSignal.timeout(120_000),
       });
@@ -28,10 +35,14 @@ export function createPatientDownloader({ fetchImpl = globalThis.fetch, saveBlob
       if (bytes.byteLength !== release.sizeBytes || sha256 !== release.sha256) {
         throw new Error('Download verification failed. Reload this page and try again.');
       }
-      saveBlob(new Blob([bytes], { type: 'application/vnd.android.package-archive' }));
+      saveBlob(new Blob([bytes], { type: 'application/vnd.android.package-archive' }), installer.filename);
       return true;
     } finally {
       pending = false;
     }
   };
+}
+
+export function createPatientDownloader(options) {
+  return createAndroidDownloader('patient', options);
 }

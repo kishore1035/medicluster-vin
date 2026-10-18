@@ -7,7 +7,7 @@ supports incremental adoption: existing JavaScript stays valid, while `.ts` and
 ## Paths
 
 - Reusable UI: `src/components/ui`, imported as `@/components/ui/...`.
-- Existing feature components: `src/components` and `src/patient-app`.
+- Existing feature components: `src/components`, `src/patient-app` and `src/crew-app`.
 - Global styles and shadcn semantic tokens: `src/index.css`.
 - Public download page styles: `src/pages/download-page.css`.
 - Tailwind configuration: `tailwind.config.js`.
@@ -97,11 +97,21 @@ the supplied horizontal pill reference. Its four application tabs share one
 action bar; arrow keys, Home and End switch tabs. Product navigation and direct
 `#patient`, `#crew` and other application links select the matching tab.
 
-The selected application opens its real configured web destination. Only the
-Patient tab offers Android download and installation help. Downloads use the
-existing checksum-verified POST helper and in-flight lock, never a navigable APK
-URL or automatic retry. Unconfigured workspaces show Coming soon. On phones
-the application tabs form two columns. The selector needs no new dependency or
+The Crew tab offers Download Android as its primary action, with Open web app
+as a secondary option. Patient keeps its existing web and Android actions. Each
+Android tab loads its own metadata (`patient-app.json` or `crew-app.json`) and
+keeps its own request, busy state and errors when roles change. Installation help
+covers both APKs and links back to the selected Android app.
+
+Downloads use checksum- and size-verified click-only POST requests to the fixed
+`/api/patient-installer` or `/api/crew-installer` endpoint; no automatic retry or
+APK navigation occurs. The Crew filename is `MediCluster-Crew.apk`. Legacy direct
+Crew APK navigations redirect to `/download#crew`, preventing repeated downloads
+after a cold-start interstitial. Vite's existing `/api` proxy handles both
+installer endpoints. Unpublished Android metadata disables only that app's
+download. Unconfigured web workspaces show Coming soon; a published Crew APK
+remains downloadable even without a configured web destination. On phones the
+application tabs form two columns. The selector needs no new dependency or
 context provider. Shared application and release types live in `appTypes.ts`.
 
 ## Full public website

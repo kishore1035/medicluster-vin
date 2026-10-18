@@ -1,0 +1,55 @@
+plugins { id 'com.android.application' }
+
+def crewOrigin = System.getenv('CREW_APP_ORIGIN') ?: 'https://medicluster-dispatch-dix1.onrender.com'
+def origin = new URI(crewOrigin)
+if (origin.scheme != 'https' || !origin.host || origin.rawUserInfo || origin.rawQuery || origin.rawFragment || (origin.rawPath && origin.rawPath != '/') || (origin.port != -1 && origin.port != 443)) {
+    throw new GradleException('CREW_APP_ORIGIN must be an HTTPS origin without a path or credentials')
+}
+crewOrigin = crewOrigin.replaceAll('/+$', '')
+def hasSigningKey = System.getenv('CREW_KEYSTORE_PATH') != null
+
+android {
+    namespace 'com.medicluster.crew'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.medicluster.crew'
+        minSdk 26
+        targetSdk 35
+        versionCode Integer.parseInt(System.getenv('CREW_VERSION_CODE') ?: '1')
+        versionName System.getenv('CREW_VERSION_NAME') ?: '1.0.0'
+        buildConfigField 'String', 'CREW_ORIGIN', '"' + crewOrigin + '"'
+    }
+    buildFeatures { buildConfig true }
+    testOptions { unitTests.includeAndroidResources = true }
+    signingConfigs {
+        if (hasSigningKey) {
+            release {
+                storeFile file(System.getenv('CREW_KEYSTORE_PATH'))
+                storePassword System.getenv('CREW_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('CREW_KEY_ALIAS')
+                keyPassword System.getenv('CREW_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (hasSigningKey) signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    if (!hasSigningKey && graph.allTasks.any { it.name == 'packageRelease' }) {
+        throw new GradleException('Release APK requires CREW_KEYSTORE_PATH and signing credentials')
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}

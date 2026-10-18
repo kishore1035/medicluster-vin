@@ -354,13 +354,20 @@ export function GetStarted({ paused = false }: { paused?: boolean }) {
 
 export function LandingFAQ({
   release,
+  crewRelease = null,
+  installApp = "patient",
   installOpen,
   setInstallOpen,
 }: {
   release: PatientRelease | null;
+  crewRelease?: PatientRelease | null;
+  installApp?: string;
   installOpen: boolean;
   setInstallOpen: (open: boolean) => void;
 }) {
+  const crewSelected = installApp === "crew";
+  const selectedRelease = crewSelected ? crewRelease : release;
+  const appName = crewSelected ? "Crew app" : "Patient app";
   return (
     <section
       className="mc-faq mc-container"
@@ -391,7 +398,7 @@ export function LandingFAQ({
             <Plus size={20} aria-hidden="true" />
           </summary>
           <p>
-            Yes. The Patient app is available for Android 8.0 and later. Web
+            Yes. The Patient and Crew apps are available for Android 8.0 and later. Web
             apps also work in your browser, including Safari on iPhone. An
             internet connection is required.
           </p>
@@ -407,17 +414,17 @@ export function LandingFAQ({
           </summary>
           <div>
             <p>
-              Choose Download Android on the Patient app card. Open the
+              Choose Download Android on the Patient or Crew app card. Each app has its own APK. Open the
               downloaded APK on your phone and follow Android’s installation
               steps. If asked, allow installation from your browser.
             </p>
-            {release && (
+            {selectedRelease && (
               <p className="mc-release-note">
-                Version {release.versionName} ·{" "}
-                {Math.ceil(release.sizeBytes / 1024)} KB · Android 8.0+
+                {appName} · Version {selectedRelease.versionName} ·{" "}
+                {Math.ceil(selectedRelease.sizeBytes / 1024)} KB · Android 8.0+
               </p>
             )}
-            <TextLink href="#patient">Find the Android download</TextLink>
+            <TextLink href={crewSelected ? "#crew" : "#patient"}>Find the {appName} Android download</TextLink>
           </div>
         </details>
         <details>

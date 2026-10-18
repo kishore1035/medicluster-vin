@@ -54,3 +54,12 @@ test('patient APK stays a click action while web files use real URLs', () => {
   const unavailable = product.productFolderFiles({ id: 'crew', webHref: null, android: false }, release);
   assert.deepEqual(unavailable.map(file => [file.name, file.disabled, file.href]), [['Coming soon', true, undefined]]);
 });
+
+test('Crew folder describes Crew web access and keeps published Android available without web configuration', () => {
+  const release = { versionName: '1.0.0', sizeBytes: 24000, sha256: 'b'.repeat(64) };
+  const crew = { id: 'crew', name: 'Crew app', webHref: 'https://dispatch.example/#/driver/login', android: true };
+  const files = product.productFolderFiles(crew, release);
+  assert.equal(files.find(file => file.name === 'Open web app').meta, 'Crew workspace');
+  const androidOnly = product.productFolderFiles({ ...crew, webHref: null }, release);
+  assert.deepEqual(androidOnly.map(file => file.name), ['Download Android', 'How to install']);
+});
