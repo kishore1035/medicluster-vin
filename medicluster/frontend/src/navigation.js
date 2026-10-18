@@ -1,5 +1,9 @@
-// Where the separate dispatch app lives (set VITE_DISPATCH_URL in production builds).
-export const DISPATCH_URL = import.meta.env.VITE_DISPATCH_URL || "http://localhost:5174";
+// VITE_DISPATCH_URL can override the deployed dispatch and crew workspace.
+export const DISPATCH_URL = import.meta.env.VITE_DISPATCH_URL || (
+  import.meta.env.DEV
+    ? "http://localhost:5174"
+    : "https://medicluster-dispatch-dix1.onrender.com"
+);
 
 // Clinician app sections, in sidebar order. Numbers ("01", "02", …) follow this order.
 export const NAV_GROUPS = [
