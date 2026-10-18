@@ -10,7 +10,7 @@ A clinician can set the login email using authenticated `PUT /api/patient-app/:p
 
 Follow [email template setup](email-templates/README.md). Set backend `.env` variables from `.env.example`. Live delivery requires your connected email sender and valid EmailJS service/template/account IDs. The app shows email sign-in as unavailable until these values exist. Correct-looking values alone do not prove delivery; verify with your own linked inbox after setup.
 
-Email codes expire after five minutes, allow five guesses, and are consumed atomically once. MongoDB retains a separate reservation history for a rolling five-request-per-hour cap and 30-second cooldown, including concurrent requests. Unknown emails receive the same generic request reply, but no email is sent and no patient account is created. Provider failures consume the request reservation to avoid repeatedly hammering a failing service.
+Email codes expire after five minutes, allow five guesses, and are consumed atomically once. Supabase Postgres retains a separate reservation history for a rolling five-request-per-hour cap and 30-second cooldown, including concurrent requests. Unknown emails receive the same generic request reply, but no email is sent and no patient account is created. Provider failures consume the request reservation to avoid repeatedly hammering a failing service.
 
 ## Google OAuth
 
@@ -27,6 +27,8 @@ Browser and native Google sign-in require a secure context for Web Crypto (HTTPS
 
 ## Verification
 
-Backend: `node --test tests/*.test.js`. Tests create isolated temporary MongoDB databases and mock only EmailJS/Google provider calls. Frontend: `npm test && npm run build`. Native: see patient Android README for signed build/tests. Real inbox delivery, actual Google consent and physical Android browser return require your provider credentials/device and are not proven by mocked tests.
+Backend: `node --test tests/*.test.js`. Tests run the actual migration in isolated PGlite Postgres databases and mock only EmailJS/Google provider calls. Frontend: `npm test && npm run build`. Native: see patient Android README for signed build/tests. Real inbox delivery, actual Google consent and physical Android browser return require your provider credentials/device and are not proven by mocked tests.
 
 Official references: [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect), [Google auth library](https://github.com/googleapis/google-auth-library-nodejs).
+
+Storage setup: see [Supabase migration instructions](supabase/README.md). Patient profiles remain clinic-linked; a provider account alone does not create a patient record.

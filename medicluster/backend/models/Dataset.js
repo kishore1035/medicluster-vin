@@ -1,11 +1,11 @@
 /**
  * backend/models/Dataset.js
- * Mongoose schema for uploaded patient datasets.
+ * Storage model for uploaded patient datasets.
  */
 
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
-const PatientDataRowSchema = new mongoose.Schema(
+const PatientDataRowSchema = defineSchema(
   {
     patient_id: String,
     gender: String,
@@ -28,7 +28,7 @@ const PatientDataRowSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const DatasetSchema = new mongoose.Schema(
+const DatasetSchema = defineSchema(
   {
     name: { type: String, required: true },
     uploadedAt: { type: Date, default: Date.now },
@@ -39,6 +39,5 @@ const DatasetSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-DatasetSchema.index({ createdAt: -1 });
 
-module.exports = mongoose.model("Dataset", DatasetSchema);
+module.exports = defineModel("Dataset", DatasetSchema);

@@ -3,11 +3,11 @@
  * Clinician account: credentials plus the role/department chosen during onboarding.
  */
 
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
 const ROLES = ["physician", "nurse", "analyst", "dispatcher"];
 
-const UserSchema = new mongoose.Schema(
+const UserSchema = defineSchema(
   {
     email:        { type: String, required: true, unique: true, lowercase: true, trim: true },
     name:         { type: String, required: true, trim: true },
@@ -30,5 +30,5 @@ UserSchema.methods.toPublic = function toPublic() {
   };
 };
 
-module.exports = mongoose.model("User", UserSchema);
+module.exports = defineModel("User", UserSchema);
 module.exports.ROLES = ROLES;

@@ -3,9 +3,9 @@
  * Patient-app profile: display name, care team, next visit and emergency contact.
  */
 
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
-const PatientProfileSchema = new mongoose.Schema(
+const PatientProfileSchema = defineSchema(
   {
     patientId: { type: String, required: true, unique: true },
     name:      { type: String, default: "" },
@@ -32,4 +32,4 @@ const PatientProfileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("PatientProfile", PatientProfileSchema);
+module.exports = defineModel("PatientProfile", PatientProfileSchema);

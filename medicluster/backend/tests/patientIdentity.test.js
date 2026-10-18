@@ -2,7 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const express = require('express');
-const mongoose = require('mongoose');
+const { createTestDatabase } = require('./helpers/supabaseTestDb');
+const { createId } = require('../db/ids');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const bcrypt = require('bcryptjs');
@@ -22,10 +23,8 @@ test('patient email and Google identity integration', async (t) => {
   };
   const previous = Object.fromEntries(Object.keys(settings).map(key => [key, process.env[key]]));
   Object.assign(process.env, settings);
-  await mongoose.connect(`mongodb://127.0.0.1:27017/medicluster_identity_test_${process.pid}`, { serverSelectionTimeoutMS: 3000 });
+  const database = await createTestDatabase(t);
   t.after(async () => {
-    await mongoose.connection.dropDatabase();
-    await mongoose.disconnect();
     for (const key of Object.keys(settings)) {
       if (previous[key] === undefined) delete process.env[key]; else process.env[key] = previous[key];
     }
@@ -85,7 +84,7 @@ test('patient email and Google identity integration', async (t) => {
     assert.ok(params.time);
     assert.equal(emails[0].body.accessToken, 'test-private');
     assert.equal(result.body.code, undefined);
-    const stored = await mongoose.connection.collection('patientemailotps').findOne({ email: 'vinaygk219@gmail.com' });
+    const stored = await database.collection('patientemailotps').findOne({ email: 'vinaygk219@gmail.com' });
     assert.match(stored.codeHash, /^\$2/);
     assert.equal(stored.code, undefined);
     assert.ok(stored.expiresAt - stored.createdAt <= 5 * 60_000 + 1000);
@@ -124,13 +123,13 @@ test('patient email and Google identity integration', async (t) => {
       const result = await post('/request-email-code', { email: 'failure@gmail.com' });
       assert.equal(result.status, 502);
       assert.equal(JSON.stringify(result.body).includes('private-provider-secret'), false);
-      assert.equal(await mongoose.connection.collection('patientemailotps').countDocuments({ email: 'failure@gmail.com' }), 0);
+      assert.equal(await database.collection('patientemailotps').countDocuments({ email: 'failure@gmail.com' }), 0);
     } finally { providerFailure = false; }
   });
 
   await t.test('hourly request cap survives OTP expiration and cleanup', async () => {
     const now = Date.now();
-    await mongoose.connection.collection('patientauthlimits').insertOne({ _id: `email:${hash('limited@gmail.com')}`,
+    await database.collection('patientauthlimits').insertOne({ _id: `email:${hash('limited@gmail.com')}`,
       requests: [1, 2, 3, 4, 5].map(minutes => new Date(now - minutes * 60_000)), expiresAt: new Date(now + 60 * 60_000) });
     assert.equal((await post('/request-email-code', { email: 'limited@gmail.com' })).status, 429);
   });
@@ -174,7 +173,7 @@ test('patient email and Google identity integration', async (t) => {
     assert.equal(destination.searchParams.get('redirect_uri'), 'http://localhost:3000/api/patient-auth/google/callback');
     assert.equal(destination.searchParams.get('code_challenge_method'), 'S256');
     const state = destination.searchParams.get('state');
-    const flow = await mongoose.connection.collection('patientgoogleflows').findOne({ _id: hash(state) });
+    const flow = await database.collection('patientgoogleflows').findOne({ _id: hash(state) });
     assert.ok(flow);
     expectedProviderVerifier = flow.providerVerifier;
     providerClaims = { sub: 'google-subject-1', email: 'vinaygk219@gmail.com', email_verified: true, nonce: flow.nonce };
@@ -239,7 +238,7 @@ test('patient email and Google identity integration', async (t) => {
     rejectIdentity = false;
     assert.equal(new URL(rejected.headers.get('location')).searchParams.get('auth_error'), 'google_failed');
     const code = crypto.randomBytes(32).toString('hex');
-    await mongoose.connection.collection('patientloginexchanges').insertOne({ _id: hash(code), patientId: 'EMAIL-1', challenge: challenge(flow.verifier), expiresAt: new Date(Date.now() - 1000) });
+    await database.collection('patientloginexchanges').insertOne({ _id: hash(code), patientId: 'EMAIL-1', challenge: challenge(flow.verifier), expiresAt: new Date(Date.now() - 1000) });
     assert.equal((await post('/google/exchange', { code, verifier: flow.verifier })).status, 401);
   });
 
@@ -251,7 +250,7 @@ test('patient email and Google identity integration', async (t) => {
     };
     await save(signPatientToken('EMAIL-1'), 'attacker@gmail.com');
     assert.equal((await PatientProfile.findOne({ patientId: 'EMAIL-1' })).email, 'vinaygk219@gmail.com');
-    const clinician = signToken({ _id: new mongoose.Types.ObjectId() });
+    const clinician = signToken({ _id: createId() });
     const result = await save(clinician, 'changed@gmail.com');
     assert.equal(result.status, 200);
     assert.equal(result.body.email, 'changed@gmail.com');

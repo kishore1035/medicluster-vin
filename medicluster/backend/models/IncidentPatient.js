@@ -3,9 +3,9 @@
  * A single patient record within a dispatch incident (MCI or single-casualty).
  */
 
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
-const VitalsSchema = new mongoose.Schema(
+const VitalsSchema = defineSchema(
   {
     respiratory_rate: Number,
     spo2:             Number,
@@ -23,7 +23,7 @@ const VitalsSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const IncidentPatientSchema = new mongoose.Schema(
+const IncidentPatientSchema = defineSchema(
   {
     incident_id:   { type: String, required: true, index: true }, // dispatch_id
     patient_tag:   { type: String, required: true, unique: true }, // PT-ARIA-xxx-001
@@ -65,6 +65,5 @@ const IncidentPatientSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-IncidentPatientSchema.index({ incident_id: 1, triage_category: 1 });
 
-module.exports = mongoose.model("IncidentPatient", IncidentPatientSchema);
+module.exports = defineModel("IncidentPatient", IncidentPatientSchema);

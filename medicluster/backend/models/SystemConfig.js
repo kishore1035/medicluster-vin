@@ -1,8 +1,8 @@
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
-const SystemConfigSchema = new mongoose.Schema({
+const SystemConfigSchema = defineSchema({
   key: { type: String, required: true, unique: true },
   value: { type: String, required: true },
 }, { timestamps: true });
 
-module.exports = mongoose.model("SystemConfig", SystemConfigSchema);
+module.exports = defineModel("SystemConfig", SystemConfigSchema);

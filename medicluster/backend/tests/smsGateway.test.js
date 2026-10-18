@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const mongoose = require('mongoose');
+const { createTestDatabase } = require('./helpers/supabaseTestDb');
+const { createId } = require('../db/ids');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('node:crypto');
@@ -15,10 +16,8 @@ test('Android delivery queues an encrypted OTP that existing verification accept
   process.env.OTP_DEV_LOG = 'false';
   process.env.SMS_GATEWAY_TOKEN = 'test-gateway-token-with-at-least-32-characters';
   process.env.JWT_SECRET = 'test-jwt-secret-with-at-least-32-characters';
-  await mongoose.connect(`mongodb://127.0.0.1:27017/medicluster_sms_test_${process.pid}`, { serverSelectionTimeoutMS: 3000 });
+  const database = await createTestDatabase(t);
   t.after(async () => {
-    await mongoose.connection.dropDatabase();
-    await mongoose.disconnect();
     for (const key of ['OTP_DELIVERY_MODE', 'OTP_DEV_LOG', 'SMS_GATEWAY_TOKEN', 'JWT_SECRET']) {
       if (previous[key] === undefined) delete process.env[key]; else process.env[key] = previous[key];
     }
@@ -26,7 +25,7 @@ test('Android delivery queues an encrypted OTP that existing verification accept
   await PatientProfile.create({ patientId: 'TEST-OTP', name: 'Test Patient', mobile: '9000000001' });
   const key = crypto.createHash('sha256').update(process.env.SMS_GATEWAY_TOKEN).digest();
   const fingerprint = crypto.createHash('sha256').update(key).digest('hex');
-  await mongoose.connection.collection('smsgatewaystates').insertOne({ _id: 'phone', keyFingerprint: fingerprint, lastSeenAt: new Date() });
+  await database.collection('smsgatewaystates').insertOne({ _id: 'phone', keyFingerprint: fingerprint, lastSeenAt: new Date() });
   const app = express();
   app.use(express.json());
   app.use('/api/patient-auth', patientRoutes);
@@ -41,7 +40,7 @@ test('Android delivery queues an encrypted OTP that existing verification accept
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mobile: '9000000001' }),
   });
   assert.equal(response.status, 200, JSON.stringify(await response.json()));
-  const jobs = await mongoose.connection.collection('smsjobs').find().toArray();
+  const jobs = await database.collection('smsjobs').find().toArray();
   assert.equal(jobs.length, 1);
   assert.equal(jobs[0].status, 'queued');
   assert.equal(jobs[0].message, undefined);
@@ -59,11 +58,11 @@ test('Android delivery queues an encrypted OTP that existing verification accept
     return { status: res.status, body: await res.json() };
   };
   await t.test('heartbeat keeps busy sender online without claiming another SMS', async () => {
-    await mongoose.connection.collection('smsgatewaystates').updateOne({ _id: 'phone' }, { $set: { lastSeenAt: new Date(Date.now() - 60_000) } });
+    await database.collection('smsgatewaystates').updateOne({ _id: 'phone' }, { $set: { lastSeenAt: new Date(Date.now() - 60_000) } });
     assert.equal((await post('/api/sms-gateway/heartbeat')).status, 200);
-    const state = await mongoose.connection.collection('smsgatewaystates').findOne({ _id: 'phone' });
+    const state = await database.collection('smsgatewaystates').findOne({ _id: 'phone' });
     assert.ok(state.lastSeenAt.getTime() > Date.now() - 5000);
-    assert.equal((await mongoose.connection.collection('smsjobs').findOne({ _id: jobs[0]._id })).status, 'queued');
+    assert.equal((await database.collection('smsjobs').findOne({ _id: jobs[0]._id })).status, 'queued');
     assert.equal((await post('/api/sms-gateway/heartbeat', {}, 'Bearer wrong-key')).status, 401);
   });
   await t.test('sender endpoints reject missing, wrong, or non-Bearer keys without exposing jobs', async () => {
@@ -84,7 +83,7 @@ test('Android delivery queues an encrypted OTP that existing verification accept
     assert.equal(claimed.mobile, '+919000000001');
     const code = claimed.message.match(/\b(\d{6})\b/)[1];
     assert.equal(await bcrypt.compare(code, storedOtp.codeHash), true);
-    const updated = await mongoose.connection.collection('smsjobs').findOne({ _id: jobs[0]._id });
+    const updated = await database.collection('smsjobs').findOne({ _id: jobs[0]._id });
     assert.equal(updated.status, 'claimed');
     assert.equal(updated.encryptedPayload, undefined);
     assert.equal((await post('/api/sms-gateway/claim')).body.job, null);
@@ -110,7 +109,7 @@ test('Android delivery queues an encrypted OTP that existing verification accept
   await t.test('expired or already-used codes are never sent', async () => {
     const source = { ...jobs[0] };
     delete source._id;
-    await mongoose.connection.collection('smsjobs').insertMany([
+    await database.collection('smsjobs').insertMany([
       { ...source, status: 'queued', expiresAt: new Date(Date.now() - 1000) },
       { ...source, status: 'queued', expiresAt: new Date(Date.now() + 60_000) },
     ]);
@@ -119,13 +118,13 @@ test('Android delivery queues an encrypted OTP that existing verification accept
 
   await t.test('offline sender fails without leaving an unusable OTP or SMS job', async () => {
     await PatientProfile.create({ patientId: 'TEST-OFFLINE', mobile: '9000000002' });
-    await mongoose.connection.collection('smsgatewaystates').updateOne({ _id: 'phone' }, { $set: { lastSeenAt: new Date(Date.now() - 60_000) } });
-    const countBefore = await mongoose.connection.collection('smsjobs').countDocuments();
+    await database.collection('smsgatewaystates').updateOne({ _id: 'phone' }, { $set: { lastSeenAt: new Date(Date.now() - 60_000) } });
+    const countBefore = await database.collection('smsjobs').countDocuments();
     const result = await post('/api/patient-auth/request-code', { mobile: '9000000002' });
     assert.equal(result.status, 503);
     assert.match(result.body.error, /offline/);
     assert.equal(await PatientOtp.countDocuments({ mobile: '9000000002' }), 0);
-    assert.equal(await mongoose.connection.collection('smsjobs').countDocuments(), countBefore);
+    assert.equal(await database.collection('smsjobs').countDocuments(), countBefore);
   });
 
   await t.test('resend cooldown still applies when using Android delivery', async () => {
@@ -137,16 +136,16 @@ test('Android delivery queues an encrypted OTP that existing verification accept
     const otp = await PatientOtp.create({ mobile: '9000000001', codeHash: storedOtp.codeHash, expiresAt: new Date(Date.now() + 120_000) });
     const corrupt = { ...jobs[0], otpId: otp._id, encryptedPayload: Buffer.from('invalid ciphertext').toString('base64'), expiresAt: otp.expiresAt };
     delete corrupt._id;
-    const inserted = await mongoose.connection.collection('smsjobs').insertOne(corrupt);
+    const inserted = await database.collection('smsjobs').insertOne(corrupt);
     assert.equal((await post('/api/sms-gateway/claim')).body.job, null);
-    assert.equal((await mongoose.connection.collection('smsjobs').findOne({ _id: inserted.insertedId })).status, 'failed');
+    assert.equal((await database.collection('smsjobs').findOne({ _id: inserted.insertedId })).status, 'failed');
   });
 
   await t.test('rotating sender key invalidates previous heartbeat, credentials, and queued payloads', async () => {
     const otp = await PatientOtp.create({ mobile: '9000000001', codeHash: storedOtp.codeHash, expiresAt: new Date(Date.now() + 120_000) });
     const oldJob = { ...jobs[0], otpId: otp._id, expiresAt: otp.expiresAt };
     delete oldJob._id;
-    await mongoose.connection.collection('smsjobs').insertOne(oldJob);
+    await database.collection('smsjobs').insertOne(oldJob);
     const previousToken = process.env.SMS_GATEWAY_TOKEN;
     process.env.SMS_GATEWAY_TOKEN = 'rotated-test-token-with-at-least-32-characters';
     await PatientProfile.create({ patientId: 'TEST-ROTATED', mobile: '9000000003' });

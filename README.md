@@ -7,7 +7,7 @@ Patient risk analysis, a patient portal, and ambulance dispatch applications.
 ```text
 medicluster/
   frontend/       React clinician dashboard and patient app (/app)
-  backend/        Express API, MongoDB models, staff and patient authentication
+  backend/        Express API, Supabase records, staff and patient authentication
   ml-engine/      Flask clustering, risk analysis, imaging, NLP and forecasting
   patient-android/ Native patient-only Android APK and build instructions
   crew-android/    Native crew-only Android APK and build instructions
@@ -32,12 +32,13 @@ Keep application paths unchanged when configuring Render or Railway service root
 
 ## MediCluster local setup
 
-Prerequisites: Node.js 20+, Python 3.10+, and MongoDB.
+Prerequisites: Node.js 20+, Python 3.10+, and the existing Supabase project.
 
 1. Copy `medicluster/backend/.env.example` to `medicluster/backend/.env`.
-2. Set `MONGO_URI`, a random `JWT_SECRET` of at least 32 characters, and `ML_ENGINE_URL=http://localhost:8080`.
-3. Set `ALLOWED_EMAIL_DOMAINS` to the comma-separated work email domains permitted to register staff accounts.
-4. Run each service in a separate terminal:
+2. Set `SUPABASE_URL`, backend-only `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`), a random `JWT_SECRET` of at least 32 characters, and `ML_ENGINE_URL=http://localhost:8080`.
+3. Install the additive SQL schema using [Supabase setup](medicluster/backend/supabase/README.md).
+4. Set `ALLOWED_EMAIL_DOMAINS` to the comma-separated work email domains permitted to register staff accounts.
+5. Run each service in a separate terminal:
 
 ```bash
 # ML engine
@@ -111,7 +112,8 @@ complete these integrations.
 | MediCluster ML | `medicluster/ml-engine` | Existing Dockerfile runs Gunicorn |
 | Dispatch dashboard + crew app | `ambulance-dispatch/frontend/dispatcher-dashboard` | Existing Dockerfile, or static build with `npm ci && npm run build`, publish `dist` |
 
-Set backend secrets in the hosting provider, including `MONGO_URI`, `JWT_SECRET`,
+Set backend secrets in the hosting provider, including `SUPABASE_URL`,
+`SUPABASE_SECRET_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`), `JWT_SECRET`,
 and optional Ollama provider credentials. Point `ML_ENGINE_URL` to the deployed ML
 service. Docker containers use the hosting provider's `PORT` variable.
 
@@ -126,7 +128,7 @@ signed patient Android installer. Signed-in clinicians retain their existing hom
 dashboard. Dispatch and crew entries open their separate login routes on the deployed
 dispatch website. Invalid URL overrides leave those entries unavailable.
 
-Health endpoints: MediCluster `/api/health`, ML `/health`, and ML connectivity
+Health endpoints: MediCluster `/api/health` verifies Supabase storage and returns 503 until its backend key and SQL schema work; ML `/health`, and ML connectivity
 through the web service at `/api/health/ml`.
 
 Do not commit `.env` files, private keys, database credentials, generated builds,

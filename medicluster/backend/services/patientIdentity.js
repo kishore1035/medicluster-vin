@@ -1,7 +1,7 @@
 const crypto = require('node:crypto');
 const { OAuth2Client } = require('google-auth-library');
 const PatientProfile = require('../models/PatientProfile');
-const PatientAuthLimit = require('../models/PatientAuthLimit');
+const { rpc } = require('../db/supabase');
 
 const digest = value => crypto.createHash('sha256').update(value).digest('hex');
 const challenge = value => crypto.createHash('sha256').update(value).digest('base64url');
@@ -11,24 +11,8 @@ const validEmail = email => email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.
 const authError = (message, status = 503) => Object.assign(new Error(message), { status, patientAuthError: true });
 
 async function reserveEmailRequest(email) {
-  const now = new Date();
-  const cutoff = new Date(now.getTime() - 60 * 60_000);
-  const update = [
-    { $set: { requests: { $filter: { input: { $ifNull: ['$requests', []] }, as: 'at', cond: { $gt: ['$$at', cutoff] } } } } },
-    { $set: { accepted: { $and: [
-      { $lt: [{ $size: '$requests' }, 5] },
-      { $lte: [{ $ifNull: [{ $arrayElemAt: ['$requests', -1] }, new Date(0)] }, new Date(now.getTime() - 30_000)] },
-    ] } } },
-    { $set: { requests: { $cond: ['$accepted', { $concatArrays: ['$requests', [now]] }, '$requests'] }, expiresAt: new Date(now.getTime() + 60 * 60_000) } },
-  ];
-  let reservation;
-  try {
-    reservation = await PatientAuthLimit.findOneAndUpdate({ _id: `email:${digest(email)}` }, update, { upsert: true, new: true });
-  } catch (error) {
-    if (error.code !== 11000) throw error;
-    reservation = await PatientAuthLimit.findOneAndUpdate({ _id: `email:${digest(email)}` }, update, { new: true });
-  }
-  if (!reservation?.accepted) throw authError('Please wait 30 seconds between codes. You can request up to 5 codes per hour.', 429);
+  const accepted = await rpc('mc_reserve_email', { p_hash: digest(email) });
+  if (!accepted) throw authError('Please wait 30 seconds between codes. You can request up to 5 codes per hour.', 429);
 }
 
 function publicOrigin() {

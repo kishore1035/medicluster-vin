@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
-const DispatchSchema = new mongoose.Schema(
+const DispatchSchema = defineSchema(
   {
     dispatch_id:    { type: String, required: true, unique: true },
     emergency: {
@@ -9,7 +9,7 @@ const DispatchSchema = new mongoose.Schema(
       severity_score:     { type: Number, min: 1, max: 10, required: true },
       casualties:         { type: Number, default: 1 },
     },
-    aria_response:  { type: mongoose.Schema.Types.Mixed, default: null },
+    aria_response:  { type: Object, default: null },
     status:         { type: String, enum: ["active", "resolved", "cancelled"], default: "active" },
     dispatched_ambulance_id: { type: String, default: null },
     primary_hospital_id:     { type: String, default: null },
@@ -17,6 +17,5 @@ const DispatchSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-DispatchSchema.index({ createdAt: -1 });
 
-module.exports = mongoose.model("Dispatch", DispatchSchema);
+module.exports = defineModel("Dispatch", DispatchSchema);

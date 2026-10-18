@@ -3,9 +3,9 @@
  * Self-logged vital reading from the patient app.
  */
 
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
-const ReadingSchema = new mongoose.Schema(
+const ReadingSchema = defineSchema(
   {
     patientId: { type: String, required: true, index: true },
     type:      { type: String, required: true, enum: ["glucose", "bp", "weight"] },
@@ -17,4 +17,4 @@ const ReadingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Reading", ReadingSchema);
+module.exports = defineModel("Reading", ReadingSchema);

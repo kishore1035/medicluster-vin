@@ -1,8 +1,7 @@
 const express = require("express");
 const multer = require("multer");
-const mongoose = require("mongoose");
-const { GridFSBucket } = require("mongodb");
-const { Readable } = require("stream");
+const { createId, isValidId } = require("../db/ids");
+const mediaStorage = require("../services/mediaStorage");
 const axios = require("axios");
 const { execFile } = require("child_process");
 const path = require("path");
@@ -120,10 +119,6 @@ const upload = multer({
   },
 });
 
-function getBucket() {
-  return new GridFSBucket(mongoose.connection.db, { bucketName: "patient_media" });
-}
-
 function getFileType(mimetype, originalname = "") {
   const ext = "." + originalname.split(".").pop().toLowerCase();
   if (mimetype.startsWith("image/") || DICOM_EXTENSIONS.has(ext)) return "image";
@@ -172,24 +167,30 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
     const { patient_id } = req.body;
     if (!patient_id) return res.status(400).json({ error: "patient_id is required" });
 
-    const bucket = getBucket();
-    const readable = Readable.from(req.file.buffer);
-    const uploadStream = bucket.openUploadStream(req.file.originalname, {
-      contentType: req.file.mimetype,
-    });
+    const fileId = createId();
+    const storageKey = mediaStorage.storageKeyFor(fileId);
+    await mediaStorage.uploadObject(storageKey, req.file.buffer, req.file.mimetype);
 
-    await new Promise((resolve, reject) => {
-      readable.pipe(uploadStream).on("error", reject).on("finish", resolve);
-    });
-
-    const media = await PatientMedia.create({
-      patient_id,
-      original_name: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      file_type: getFileType(req.file.mimetype, req.file.originalname),
-      gridfs_id: uploadStream.id,
-    });
+    let media;
+    try {
+      media = await PatientMedia.create({
+        patient_id,
+        original_name: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        file_type: getFileType(req.file.mimetype, req.file.originalname),
+        gridfs_id: fileId,
+        storageKey,
+      });
+    } catch (error) {
+      // Avoid leaving a clinical file behind when its metadata cannot be saved.
+      try {
+        await mediaStorage.deleteObject({ gridfs_id: fileId, storageKey });
+      } catch (cleanupError) {
+        if (cleanupError.status !== 404) throw cleanupError;
+      }
+      throw error;
+    }
 
     res.status(201).json(media);
   } catch (err) {
@@ -200,21 +201,27 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
 // GET /api/media/file/:fileId  — stream file content (must be before /:patientId)
 router.get("/file/:fileId", async (req, res, next) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.fileId))
+    if (!isValidId(req.params.fileId))
       return res.status(400).json({ error: "Invalid file ID" });
 
     const media = await PatientMedia.findOne({
-      gridfs_id: new mongoose.Types.ObjectId(req.params.fileId),
+      gridfs_id: req.params.fileId.toLowerCase(),
     });
     if (!media) return res.status(404).json({ error: "File not found" });
 
+    const downloadStream = await mediaStorage.downloadObject(media);
     res.set("Content-Type", media.mimetype);
     res.set("Content-Disposition", `inline; filename="${encodeURIComponent(media.original_name)}"`);
     if (media.size) res.set("Content-Length", media.size);
+    res.set("Cache-Control", "no-store");
 
-    const bucket = getBucket();
-    const downloadStream = bucket.openDownloadStream(media.gridfs_id);
-    downloadStream.on("error", () => res.status(404).end());
+    downloadStream.on("error", (error) => {
+      if (res.headersSent) return res.destroy();
+      res.removeHeader("Content-Length");
+      res.removeHeader("Content-Disposition");
+      next(error);
+    });
+    res.on("close", () => downloadStream.destroy());
     downloadStream.pipe(res);
   } catch (err) {
     next(err);
@@ -224,16 +231,15 @@ router.get("/file/:fileId", async (req, res, next) => {
 // DELETE /api/media/file/:fileId
 router.delete("/file/:fileId", async (req, res, next) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.fileId))
+    if (!isValidId(req.params.fileId))
       return res.status(400).json({ error: "Invalid file ID" });
 
     const media = await PatientMedia.findOne({
-      gridfs_id: new mongoose.Types.ObjectId(req.params.fileId),
+      gridfs_id: req.params.fileId.toLowerCase(),
     });
     if (!media) return res.status(404).json({ error: "File not found" });
 
-    const bucket = getBucket();
-    await bucket.delete(media.gridfs_id);
+    await mediaStorage.deleteObject(media);
     await media.deleteOne();
 
     res.json({ deleted: true });
@@ -245,27 +251,17 @@ router.delete("/file/:fileId", async (req, res, next) => {
 // POST /api/media/analyze/:fileId  — run DL analysis on an image (must be before /:patientId)
 router.post("/analyze/:fileId", async (req, res, next) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.fileId))
+    if (!isValidId(req.params.fileId))
       return res.status(400).json({ error: "Invalid file ID" });
 
     const media = await PatientMedia.findOne({
-      gridfs_id: new mongoose.Types.ObjectId(req.params.fileId),
+      gridfs_id: req.params.fileId.toLowerCase(),
     });
     if (!media) return res.status(404).json({ error: "File not found" });
     if (media.file_type !== "image")
       return res.status(400).json({ error: "Only images can be analyzed" });
 
-    // Stream file from GridFS into a buffer
-    const bucket = getBucket();
-    const chunks = [];
-    const downloadStream = bucket.openDownloadStream(media.gridfs_id);
-    await new Promise((resolve, reject) => {
-      downloadStream.on("data", (chunk) => chunks.push(chunk));
-      downloadStream.on("end", resolve);
-      downloadStream.on("error", reject);
-    });
-
-    const imageB64 = Buffer.concat(chunks).toString("base64");
+    const imageB64 = (await mediaStorage.readObject(media)).toString("base64");
 
     const model_name = req.body.model_name || "densenet121-res224-all";
 
@@ -483,7 +479,7 @@ const LANGUAGE_NAMES = {
   ta: "Tamil",
 };
 
-// POST /api/media/ai-chat  — Ollama vision chat (direct base64, no GridFS)
+// POST /api/media/ai-chat  — Ollama vision chat (direct base64)
 router.post("/ai-chat", async (req, res, next) => {
   try {
     const { imageBase64, mediaType, chatHistory = [], question = "", language = "en", location } = req.body;
@@ -602,11 +598,11 @@ When analyzing a medical image, structure your response with these exact section
 // POST /api/media/ai-assistant/:fileId  — Ollama vision AI assistant (chat)
 router.post("/ai-assistant/:fileId", async (req, res, next) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.fileId))
+    if (!isValidId(req.params.fileId))
       return res.status(400).json({ error: "Invalid file ID" });
 
     const media = await PatientMedia.findOne({
-      gridfs_id: new mongoose.Types.ObjectId(req.params.fileId),
+      gridfs_id: req.params.fileId.toLowerCase(),
     });
     if (!media) return res.status(404).json({ error: "File not found" });
     if (media.file_type !== "image")
@@ -615,15 +611,7 @@ router.post("/ai-assistant/:fileId", async (req, res, next) => {
     const SUPPORTED = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
     const mediaType = SUPPORTED.has(media.mimetype) ? media.mimetype : "image/jpeg";
 
-    const bucket = getBucket();
-    const chunks = [];
-    const downloadStream = bucket.openDownloadStream(media.gridfs_id);
-    await new Promise((resolve, reject) => {
-      downloadStream.on("data", (chunk) => chunks.push(chunk));
-      downloadStream.on("end", resolve);
-      downloadStream.on("error", reject);
-    });
-    const imageB64 = Buffer.concat(chunks).toString("base64");
+    const imageB64 = (await mediaStorage.readObject(media)).toString("base64");
 
     const { chatHistory = [], question = "", location } = req.body;
 
@@ -704,22 +692,13 @@ When analyzing a medical image, structure your response with these exact section
 // POST /api/media/gradcam/:fileId  — Grad-CAM heatmap for a stored image
 router.post("/gradcam/:fileId", async (req, res, next) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.fileId))
+    if (!isValidId(req.params.fileId))
       return res.status(400).json({ error: "Invalid file ID" });
 
-    const media = await PatientMedia.findOne({ gridfs_id: new mongoose.Types.ObjectId(req.params.fileId) });
+    const media = await PatientMedia.findOne({ gridfs_id: req.params.fileId.toLowerCase() });
     if (!media) return res.status(404).json({ error: "File not found" });
 
-    const bucket = getBucket();
-    const chunks = [];
-    const dl = bucket.openDownloadStream(media.gridfs_id);
-    await new Promise((resolve, reject) => {
-      dl.on("data", (c) => chunks.push(c));
-      dl.on("end", resolve);
-      dl.on("error", reject);
-    });
-
-    const imageB64 = Buffer.concat(chunks).toString("base64");
+    const imageB64 = (await mediaStorage.readObject(media)).toString("base64");
     const { model_name = "densenet121-res224-chex", target_label } = req.body;
 
     const r = await axios.post(

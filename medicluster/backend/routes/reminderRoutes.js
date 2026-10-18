@@ -4,7 +4,7 @@
  */
 
 const express = require("express");
-const mongoose = require("mongoose");
+const { isValidId } = require("../db/ids");
 const Reminder = require("../models/Reminder");
 
 const { requirePatientOrClinician, canAccessPatient } = require("../middleware/auth");
@@ -17,7 +17,7 @@ const forbidden = (res) => res.status(403).json({ error: "Not your record" });
 
 // Loads :id and checks access; responds and returns null when it can't continue.
 async function loadOwned(req, res) {
-  if (!mongoose.isValidObjectId(req.params.id)) { res.status(400).json({ error: "Invalid reminder id" }); return null; }
+  if (!isValidId(req.params.id)) { res.status(400).json({ error: "Invalid reminder id" }); return null; }
   const r = await Reminder.findById(req.params.id, { patientId: 1 }).lean();
   if (!r) { res.status(404).json({ error: "Reminder not found" }); return null; }
   if (!canAccessPatient(req, r.patientId)) { forbidden(res); return null; }
@@ -70,7 +70,7 @@ router.post("/", async (req, res, next) => {
 // ── PATCH /api/reminders/:id ──────────────────────────────────────────────
 router.patch("/:id", async (req, res, next) => {
   try { if (!(await loadOwned(req, res))) return; } catch (err) { return next(err); }
-  if (!mongoose.isValidObjectId(req.params.id)) {
+  if (!isValidId(req.params.id)) {
     return res.status(400).json({ error: "Invalid reminder id" });
   }
   try {
@@ -90,7 +90,7 @@ router.patch("/:id", async (req, res, next) => {
 // Mark one dose slot as taken. Idempotent per (date, time); decrements pillsLeft once.
 router.post("/:id/doses", async (req, res, next) => {
   try { if (!(await loadOwned(req, res))) return; } catch (err) { return next(err); }
-  if (!mongoose.isValidObjectId(req.params.id)) {
+  if (!isValidId(req.params.id)) {
     return res.status(400).json({ error: "Invalid reminder id" });
   }
   const { date, time } = req.body;
@@ -121,7 +121,7 @@ router.post("/:id/doses", async (req, res, next) => {
 // ── DELETE /api/reminders/:id ─────────────────────────────────────────────
 router.delete("/:id", async (req, res, next) => {
   try { if (!(await loadOwned(req, res))) return; } catch (err) { return next(err); }
-  if (!mongoose.isValidObjectId(req.params.id)) {
+  if (!isValidId(req.params.id)) {
     return res.status(400).json({ error: "Invalid reminder id" });
   }
   try {

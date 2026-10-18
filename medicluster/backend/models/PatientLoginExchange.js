@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
-const schema = new mongoose.Schema({ _id: String, challenge: String, patientId: String, expiresAt: Date });
-schema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-module.exports = mongoose.model('PatientLoginExchange', schema);
+const { defineModel, schema: defineSchema } = require('../db/model');
+const schema = defineSchema({ _id: String, challenge: String, patientId: String, expiresAt: Date });
+module.exports = defineModel('PatientLoginExchange', schema);

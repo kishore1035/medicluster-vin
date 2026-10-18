@@ -3,9 +3,9 @@
  * One-time sign-in codes for the patient mobile app. Only a hash of the code is stored.
  */
 
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
-const PatientOtpSchema = new mongoose.Schema(
+const PatientOtpSchema = defineSchema(
   {
     mobile:    { type: String, required: true, index: true },
     codeHash:  { type: String, required: true },
@@ -16,7 +16,6 @@ const PatientOtpSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Mongo removes codes once they expire.
-PatientOtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Expiration is checked by the atomic sign-in queries.
 
-module.exports = mongoose.model("PatientOtp", PatientOtpSchema);
+module.exports = defineModel("PatientOtp", PatientOtpSchema);

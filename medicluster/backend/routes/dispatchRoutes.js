@@ -4,7 +4,6 @@
  */
 
 const express   = require("express");
-const mongoose  = require("mongoose");
 const Ambulance = require("../models/Ambulance");
 const Hospital  = require("../models/Hospital");
 const Dispatch  = require("../models/Dispatch");

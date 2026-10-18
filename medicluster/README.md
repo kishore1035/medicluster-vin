@@ -47,15 +47,15 @@ Source, signing, and rebuild instructions are in [patient-android/README.md](pat
                       ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │              Node.js + Express  (API Gateway)                   │
-│   POST /api/data/upload   ─►  MongoDB (Dataset)                 │
+│   POST /api/data/upload   ─►  Supabase Postgres (Dataset)                 │
 │   POST /api/cluster       ─►  Python ML Engine                  │
-│   GET  /api/cluster/:id   ─►  MongoDB (ClusterResult)           │
+│   GET  /api/cluster/:id   ─►  Supabase Postgres (ClusterResult)           │
 └───────────────┬─────────────────────────┬───────────────────────┘
                 │                         │
-         port 27017                  port 8000
+         HTTPS 443                  port 8000
                 ▼                         ▼
 ┌───────────────────┐     ┌───────────────────────────────────────┐
-│  MongoDB 6        │     │     Python 3.10 + Flask               │
+│  Supabase Postgres        │     │     Python 3.10 + Flask               │
 │  Dataset          │     │   /cluster  ─►  preprocess ─►          │
 │  ClusterResult    │     │              ─►  algorithm ─►          │
 └───────────────────┘     │              ─►  metrics   ─►          │
@@ -72,7 +72,7 @@ Source, signing, and rebuild instructions are in [patient-android/README.md](pat
 cd medicluster
 
 # 2. Start all services
-docker compose up --build
+docker compose --env-file backend/.env up --build
 
 # 3. Open browser
 open http://localhost:3000
@@ -96,7 +96,7 @@ python app.py          # runs on port 8000
 ```bash
 cd backend
 npm install
-# Edit .env: set MONGO_URI, ML_ENGINE_URL, and OLLAMA_URL/OLLAMA_API_KEY (see below)
+# Edit .env: set SUPABASE_URL / SUPABASE_SECRET_KEY, ML_ENGINE_URL, and OLLAMA_URL/OLLAMA_API_KEY (see below)
 npm run dev            # runs on port 5000
 ```
 

@@ -5,7 +5,7 @@
 
 const express = require("express");
 const axios = require("axios");
-const mongoose = require("mongoose");
+const { isValidId } = require("../db/ids");
 const Dataset = require("../models/Dataset");
 const ClusterResult = require("../models/ClusterResult");
 const {
@@ -51,7 +51,7 @@ router.post("/", async (req, res, next) => {
   if (!params || typeof params !== "object" || Array.isArray(params)) {
     return res.status(400).json({ error: "params must be an object" });
   }
-  if (datasetId !== SAMPLE_DATASET_ID && !mongoose.isValidObjectId(datasetId)) {
+  if (datasetId !== SAMPLE_DATASET_ID && !isValidId(datasetId)) {
     return res.status(400).json({ error: "Invalid datasetId" });
   }
 
@@ -118,7 +118,7 @@ router.post("/", async (req, res, next) => {
 router.get("/history/:datasetId", async (req, res, next) => {
   try {
     if (req.params.datasetId === SAMPLE_DATASET_ID) return res.json([]);
-    if (!mongoose.isValidObjectId(req.params.datasetId)) {
+    if (!isValidId(req.params.datasetId)) {
       return res.status(400).json({ error: "Invalid datasetId" });
     }
 
@@ -138,7 +138,7 @@ router.get("/history/:datasetId", async (req, res, next) => {
 router.post("/predict", async (req, res, next) => {
   const { resultId, vitals } = req.body;
 
-  if (!resultId || !mongoose.isValidObjectId(resultId)) {
+  if (!resultId || !isValidId(resultId)) {
     return res.status(400).json({ error: "resultId must be a valid MongoDB ObjectId" });
   }
   if (!vitals || typeof vitals !== "object" || Array.isArray(vitals)) {
@@ -305,7 +305,7 @@ router.post("/explain", async (req, res, next) => {
 // ── GET /api/cluster/:id ───────────────────────────────────────────────────
 router.get("/:id", async (req, res, next) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ error: "Invalid result id" });
     }
 

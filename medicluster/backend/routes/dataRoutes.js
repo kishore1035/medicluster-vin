@@ -4,7 +4,7 @@
  */
 
 const express = require("express");
-const mongoose = require("mongoose");
+const { isValidId } = require("../db/ids");
 const multer = require("multer");
 const { parse } = require("csv-parse/sync");
 const Dataset = require("../models/Dataset");
@@ -99,7 +99,7 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
 // ── GET /api/data/:id ─────────────────────────────────────────────────────
 router.get("/:id", async (req, res, next) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ error: "Invalid dataset id" });
     }
 

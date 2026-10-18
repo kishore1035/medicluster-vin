@@ -1,12 +1,12 @@
 /**
  * backend/server.js
  * Express API gateway for MediCluster.
- * Connects to MongoDB, proxies ML requests to the Python engine.
+ * Persists data in Supabase and proxies ML requests to the Python engine.
  */
 
-require("dotenv").config({ override: true });
+require("dotenv").config();
 const express = require("express");
-const mongoose = require("mongoose");
+const { rpc } = require("./db/supabase");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
@@ -64,9 +64,14 @@ app.use("/api/health",  healthRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
 app.use("/api/patient-app", patientAppRoutes);
 
-app.get("/api/health", (_req, res) =>
-  res.json({ status: "ok", service: "medicluster-backend" })
-);
+app.get("/api/health", async (_req, res) => {
+  try {
+    await rpc('mc_count', { p_collection: 'users', p_filter: {} });
+    res.json({ status: "ok", service: "medicluster-backend", database: "supabase" });
+  } catch {
+    res.status(503).json({ status: "degraded", service: "medicluster-backend", database: "unavailable" });
+  }
+});
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "API route not found" });
@@ -81,7 +86,8 @@ if (fs.existsSync(path.join(PUBLIC_DIR, "index.html"))) {
 
 app.use((err, _req, res, _next) => {
   let status = err.status || err.statusCode || 500;
-  let message = status >= 500 ? "Internal server error" : err.message;
+  let message = status === 503 ? "Service temporarily unavailable. Please try again shortly."
+    : status >= 500 ? "Internal server error" : err.message;
 
   if (err.name === "MulterError") {
     status = 400;
@@ -97,23 +103,16 @@ app.use((err, _req, res, _next) => {
   res.status(status).json({ error: message });
 });
 
-// ── MongoDB connection ────────────────────────────────────────────────────────
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/medicluster";
-
-mongoose
-  .connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 })
-  .then(() => {
-    console.log("✅  MongoDB connected");
-    app.listen(PORT, () =>
-      console.log(`🚀  MediCluster backend running on port ${PORT}`)
-    );
-  })
-  .catch((err) => {
-    console.error("❌  MongoDB connection error:", err.message);
-    // Start server even without DB so frontend can show error state
-    app.listen(PORT, () =>
-      console.log(`⚠️   Backend running without DB on port ${PORT}`)
-    );
+// Supabase is configured through runtime environment variables, never browser keys.
+if (require.main === module) {
+  const server = app.listen(PORT, () => console.log(`MediCluster backend running on port ${PORT}; storage: Supabase`));
+  const cleanupExpired = () => rpc('mc_cleanup_expired', { p_limit: 1000 }).catch(() => {
+    console.warn('Supabase expiry cleanup unavailable; check backend credentials and SQL migration.');
   });
+  cleanupExpired();
+  const cleanupTimer = setInterval(cleanupExpired, 15 * 60_000);
+  cleanupTimer.unref();
+  server.on('close', () => clearInterval(cleanupTimer));
+}
 
 module.exports = app;

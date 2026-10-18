@@ -5,7 +5,7 @@
  */
 
 const express  = require("express");
-const mongoose = require("mongoose");
+const { isValidId } = require("../db/ids");
 const IncidentPatient = require("../models/IncidentPatient");
 const Hospital        = require("../models/Hospital");
 const { scoreVitals, detectPathways, suggestBedType, requiredSpecialties } = require("../utils/triageScoring");
@@ -99,7 +99,7 @@ router.post("/incidents/:incidentId/patients", async (req, res, next) => {
 // ── PATCH /api/triage/patients/:patientId ─────────────────────────────────────
 // Update allocation, transport status, or manual triage override
 router.patch("/patients/:patientId", async (req, res, next) => {
-  if (!mongoose.isValidObjectId(req.params.patientId)) {
+  if (!isValidId(req.params.patientId)) {
     return res.status(400).json({ error: "Invalid patientId" });
   }
   const allowed = [
@@ -119,7 +119,7 @@ router.patch("/patients/:patientId", async (req, res, next) => {
 // ── POST /api/triage/patients/:patientId/vitals ───────────────────────────────
 // Append a new vitals reading + re-score triage
 router.post("/patients/:patientId/vitals", async (req, res, next) => {
-  if (!mongoose.isValidObjectId(req.params.patientId)) {
+  if (!isValidId(req.params.patientId)) {
     return res.status(400).json({ error: "Invalid patientId" });
   }
   const vitals = req.body;

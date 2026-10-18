@@ -3,9 +3,9 @@
  * Medication reminder schedule for a patient.
  */
 
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
-const ReminderSchema = new mongoose.Schema(
+const ReminderSchema = defineSchema(
   {
     patientId:      { type: String, required: true, index: true },
     medicationName: { type: String, required: true },
@@ -26,4 +26,4 @@ const ReminderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Reminder", ReminderSchema);
+module.exports = defineModel("Reminder", ReminderSchema);

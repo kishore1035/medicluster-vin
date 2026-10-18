@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
-const AmbulanceSchema = new mongoose.Schema(
+const AmbulanceSchema = defineSchema(
   {
     ambulanceId:  { type: String, required: true, unique: true },
     name:         { type: String, required: true },
@@ -16,4 +16,4 @@ const AmbulanceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Ambulance", AmbulanceSchema);
+module.exports = defineModel("Ambulance", AmbulanceSchema);

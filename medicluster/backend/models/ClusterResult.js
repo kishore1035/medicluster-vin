@@ -1,11 +1,11 @@
 /**
  * backend/models/ClusterResult.js
- * Mongoose schema for clustering run results.
+ * Storage model for clustering run results.
  */
 
-const mongoose = require("mongoose");
+const { defineModel, schema: defineSchema } = require('../db/model');
 
-const ClusterParamsSchema = new mongoose.Schema(
+const ClusterParamsSchema = defineSchema(
   {
     k: Number,
     kmeans_init: String,
@@ -20,7 +20,7 @@ const ClusterParamsSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const PatientResultSchema = new mongoose.Schema(
+const PatientResultSchema = defineSchema(
   {
     patient_id: String,
     gender: String,
@@ -48,7 +48,7 @@ const PatientResultSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const RiskDistributionSchema = new mongoose.Schema(
+const RiskDistributionSchema = defineSchema(
   {
     Low: { type: Number, default: 0 },
     Moderate: { type: Number, default: 0 },
@@ -60,7 +60,7 @@ const RiskDistributionSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const ClusterProfileSchema = new mongoose.Schema(
+const ClusterProfileSchema = defineSchema(
   {
     cluster_id: Number,
     risk_tier: String,
@@ -70,7 +70,7 @@ const ClusterProfileSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const PreprocessingSchema = new mongoose.Schema(
+const PreprocessingSchema = defineSchema(
   {
     rows_before: Number,
     rows_after: Number,
@@ -81,10 +81,10 @@ const PreprocessingSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const ClusterResultSchema = new mongoose.Schema(
+const ClusterResultSchema = defineSchema(
   {
     datasetId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "Dataset",
       required: true,
     },
@@ -106,6 +106,5 @@ const ClusterResultSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-ClusterResultSchema.index({ datasetId: 1, createdAt: -1 });
 
-module.exports = mongoose.model("ClusterResult", ClusterResultSchema);
+module.exports = defineModel("ClusterResult", ClusterResultSchema);
