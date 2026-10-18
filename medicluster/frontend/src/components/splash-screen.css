@@ -1,5 +1,6 @@
 /* MediCluster splash. Timeline: 0–1.1s square outlines trace in turn · 0.9s squares fill (risk square last)
    · 1.3s mark shrinks and slides left as the wordmark opens · 1.75s letters pop in · 2.35s tagline · hold · fade. */
+.mc-startup-content { height: 100%; }
 .mc-splash {
   position: fixed; inset: 0; z-index: 99999; overflow: hidden; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -9,7 +10,7 @@
 .mc-splash[data-leaving="true"] { opacity: 0; pointer-events: none; }
 
 /* The wordmark column opens from 0fr to 1fr, so the centred lockup carries the mark to the left. */
-.mc-splash-lockup { display: flex; align-items: center; }
+.mc-splash-lockup { display: flex; align-items: center; max-width: calc(100vw - 40px); }
 .mc-splash-mark {
   width: clamp(56px, 10vw, 96px); height: auto; overflow: visible; flex: none;
   scale: 1.6;
@@ -18,7 +19,7 @@
 @keyframes mc-settle { to { scale: 1; } }
 
 .mc-splash-word {
-  display: grid; grid-template-columns: 0fr;
+  display: grid; grid-template-columns: 0fr; min-width: 0;
   animation: mc-open 600ms cubic-bezier(.65, 0, .35, 1) 1300ms both;
 }
 .mc-splash-word > div { overflow: hidden; min-width: 0; padding-left: clamp(14px, 2.4vw, 26px); display: flex; flex-direction: column; gap: 6px; }
@@ -46,7 +47,7 @@
 
 .mc-splash-tagline {
   font-family: 'IBM Plex Mono', monospace; font-size: clamp(10px, 1.3vw, 12px);
-  letter-spacing: 0.08em; text-transform: uppercase; color: #8a8c8e; white-space: nowrap;
+  letter-spacing: 0.08em; text-transform: uppercase; color: #8a8c8e; line-height: 1.6;
   animation: mc-rise 450ms ease 2350ms both;
 }
 @keyframes mc-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -54,8 +55,10 @@
 .mc-splash-skip {
   position: absolute; left: 50%; bottom: clamp(14px, 3.5vh, 36px); transform: translateX(-50%);
   font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 12px; color: #ecebe6; opacity: 0; white-space: nowrap;
+  border: 0; background: transparent; min-height: 44px; padding: 8px 12px; cursor: pointer;
   animation: mc-skip 400ms ease 600ms both;
 }
+.mc-splash-skip:focus-visible { outline: 2px solid #ecebe6; outline-offset: 2px; }
 @keyframes mc-skip { to { opacity: .4; } }
 
 /* Reduced motion: show the finished logo. */
@@ -65,3 +68,4 @@
 .mc-splash[data-reduced="true"] .mc-splash-fill { opacity: 1; }
 .mc-splash[data-reduced="true"] .mc-splash-line { opacity: 0; }
 .mc-splash[data-reduced="true"] .mc-splash-skip { opacity: .4; }
+.mc-splash[data-reduced="true"] { transition: none; }
