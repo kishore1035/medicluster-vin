@@ -22,7 +22,8 @@ import VoiceAssistantModal from '../components/VoiceAssistantModal';
 import FleetRosterModal from '../components/FleetRosterModal';
 import { useIncidents, useAmbulances, useHospitals, useDashboardStats } from '../hooks/useData';
 import socketService from '../services/socket';
-import { incidentsApi } from '../services/api';
+import supabase from '../services/supabase';
+import { incidentsApi, assignmentsApi } from '../services/api';
 import { dispatchBroadcast, DISPATCH_EVENTS } from '../services/dispatchBroadcast';
 import { useNavigate } from 'react-router-dom';
 import { T, MONO, SERIF, tagSx, btnSx } from '../theme/tokens';
@@ -98,13 +99,11 @@ const NEXT_STEP = {
 };
 
 export default function DashboardPage({ user, onLogout }) {
-  const { incidents: remoteIncidents, refetch: refetchIncidents } = useIncidents();
+  const { incidents, refetch: refetchIncidents } = useIncidents();
   const { ambulances, refetch: refetchAmbulances } = useAmbulances();
   const { hospitals } = useHospitals();
   const { stats } = useDashboardStats();
 
-  const [sosIncidents, setSosIncidents]         = useState([]);
-  const incidents = [...sosIncidents, ...remoteIncidents];
 
   const [selectedIncident, setSelectedIncident]     = useState(null);
   const [activeAssignment, setActiveAssignment]     = useState(null);
@@ -132,9 +131,16 @@ export default function DashboardPage({ user, onLogout }) {
   const closeAll = () => setPanel(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) socketService.connect(token);
-    return () => socketService.disconnect();
+    if (!import.meta.env.VITE_WEBSOCKET_URL) return;
+    let cancelled = false;
+    const connect = session => {
+      if (cancelled) return;
+      socketService.disconnect();
+      if (session?.access_token) socketService.connect(session.access_token);
+    };
+    supabase.auth.getSession().then(({ data }) => connect(data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => connect(session));
+    return () => { cancelled = true; subscription.unsubscribe(); socketService.disconnect(); };
   }, []);
 
   /* ── Incident handlers ── */
@@ -147,12 +153,6 @@ export default function DashboardPage({ user, onLogout }) {
 
   const handleAcknowledge = async () => {
     if (!selectedIncident) return;
-    if (selectedIncident.is_sos) {
-      setSosIncidents(prev => prev.map(i => i.id === selectedIncident.id ? { ...i, status:'ACKNOWLEDGED' } : i));
-      setSelectedIncident(prev => prev ? { ...prev, status:'ACKNOWLEDGED' } : prev);
-      setSnackbar({ message: 'Incident acknowledged', severity: 'success' });
-      return;
-    }
     try { await incidentsApi.acknowledge(selectedIncident.id); refetchIncidents(); }
     catch (err) { console.error('Acknowledge failed:', err); }
   };
@@ -162,7 +162,6 @@ export default function DashboardPage({ user, onLogout }) {
     if (!selectedIncident) return;
     setAutoDispatchLoading(true);
     setAutoDispatchResult(null);
-    await new Promise(r => setTimeout(r, 800));
 
     const iLat = selectedIncident.location_lat, iLng = selectedIncident.location_lng;
 
@@ -186,6 +185,14 @@ export default function DashboardPage({ user, onLogout }) {
       ].filter(Boolean),
     };
 
+    try {
+      if (!result.hospital) throw new Error('No destination hospital is available');
+      await assignmentsApi.create({ incident_id: selectedIncident.id, ambulance_id: bestAmb.id, hospital_id: result.hospital.id });
+    } catch (error) {
+      setSnackbar({ message: error.response?.data?.error || error.message || 'Dispatch failed', severity: 'error' });
+      setAutoDispatchLoading(false);
+      return;
+    }
     setAutoDispatchResult(result);
     setAutoDispatchLoading(false);
 
@@ -209,77 +216,32 @@ export default function DashboardPage({ user, onLogout }) {
     if (assignment && ci) {
       const fa = ambulances.find(a=>a.id===assignment.ambulance?.id)||assignment.ambulance;
       const fh = hospitals.find(h=>h.id===assignment.hospital?.id)||assignment.hospital;
-      const enriched = { ambulance:fa, hospital:fh, incident:ci, id:ci.id, incident_type:ci.incident_type, severity:ci.severity, location_address:ci.location_address, location_lat:ci.location_lat, location_lng:ci.location_lng, caller_name:ci.caller_name, caller_phone:ci.caller_phone, patients_count:ci.patients_count||1, description:ci.description, is_sos:ci.is_sos, distance:`${(Math.random()*4+1).toFixed(1)} km`, eta:`${fa?.eta_minutes||6} min`, hospital_name:fh?.name, _isAssignment:true };
+      const enriched = { ambulance:fa, hospital:fh, incident:ci, id:ci.id, incident_type:ci.incident_type, severity:ci.severity, location_address:ci.location_address, location_lat:ci.location_lat, location_lng:ci.location_lng, caller_name:ci.caller_name, caller_phone:ci.caller_phone, patients_count:ci.patients_count||1, description:ci.description, is_sos:ci.is_sos, distance: Number.isFinite(fa?.latitude) && Number.isFinite(fa?.longitude) ? `${hav(fa.latitude, fa.longitude, ci.location_lat, ci.location_lng).toFixed(1)} km` : 'Unknown', eta: fa?.eta_minutes ? `${fa.eta_minutes} min` : 'Unknown', hospital_name:fh?.name, _isAssignment:true };
       setActiveAssignment(enriched);
       dispatchBroadcast.send(DISPATCH_EVENTS.INCIDENT_ASSIGNED, enriched);
     }
     setSelectedIncident(null);
   };
 
-  const handleSOSCreated = useCallback((inc) => {
-    console.log('[SOS Pipeline Step 1] Incident Created & Validated:', inc);
-
-    // 1. Add new SOS incident to active incidents state so it renders on the Map
-    setSosIncidents(prev => [inc, ...prev.filter(i => i.id !== inc.id)]);
-
-    const iLat = Number(inc.location_lat) || 12.9982;
-    const iLng = Number(inc.location_lng) || 77.5921;
-
-    const currentFleet = fleetAmbulances.length > 0 ? fleetAmbulances : ambulances;
-    const availAmbs = currentFleet.filter(a => a.status === 'AVAILABLE' || !a.assigned_incident_id);
-
-    console.log('[SOS Pipeline Step 2] Searching Nearest Available Unit. Candidate pool:', currentFleet.map(a => `${a.call_sign || a.id}: ${a.status}`));
-
-    const availableAmb = availAmbs.length > 0
-      ? availAmbs.reduce((b, a) => {
-          const d = hav(Number(a.latitude) || 12.9716, Number(a.longitude) || 77.5946, iLat, iLng);
-          return d < b.dist ? { amb: a, dist: d } : b;
-        }, { amb: availAmbs[0], dist: Infinity }).amb
-      : currentFleet[2] || currentFleet[0];
-
-    const ambDist = hav(Number(availableAmb.latitude) || 12.9716, Number(availableAmb.longitude) || 77.5946, iLat, iLng);
-    const ambDistKm = ambDist.toFixed(1);
-    const etaMins = Math.max(1, Math.ceil(ambDist / (40 / 60)));
-
-    console.log('[SOS Pipeline Step 3] Best Unit Selected:', availableAmb.call_sign || availableAmb.id, '| Road Distance:', ambDistKm, 'km | ETA:', etaMins, 'min');
-
-    const dispatchedAmb = {
-      ...availableAmb,
-      status: 'EN_ROUTE',
-      assigned_incident_id: inc.id,
-      destination: inc.location_address,
-      eta: etaMins,
-    };
-
-    setFleetAmbulances(prev => {
-      const base = prev.length > 0 ? prev : ambulances;
-      return base.map(a => a.id === dispatchedAmb.id ? dispatchedAmb : a);
-    });
-
-    const assignmentPayload = {
-      ambulance: dispatchedAmb,
-      incident: inc,
-      id: inc.id,
-      incident_type: inc.incident_type,
-      severity: inc.severity,
-      location_address: inc.location_address,
-      location_lat: iLat,
-      location_lng: iLng,
-      distance: `${ambDistKm} km`,
-      eta: `${etaMins} min`,
-      _isAssignment: true,
-      _isSOS: true,
-    };
-
-    console.log('[SOS Pipeline Step 4] Unit Status flipped to EN_ROUTE. Emitting INCIDENT_ASSIGNED to CAD and Driver View:', assignmentPayload);
-
-    setActiveAssignment(assignmentPayload);
-    dispatchBroadcast.send(DISPATCH_EVENTS.INCIDENT_ASSIGNED, assignmentPayload);
-    dispatchBroadcast.send(DISPATCH_EVENTS.SOS_CREATED, inc);
-
-    setSnackbar({ message: `🚨 SOS Dispatched: ${inc.incident_type} (Unit: ${dispatchedAmb.call_sign})`, severity: 'error' });
-    setSosModalOpen(false);
-  }, [ambulances, fleetAmbulances]);
+  const handleSOSCreated = useCallback(async (draft) => {
+    try {
+      const { data: incident } = await incidentsApi.create({
+        incident_type: draft.incident_type, severity: draft.severity,
+        location_address: draft.location_address, location_lat: draft.location_lat,
+        location_lng: draft.location_lng, caller_name: draft.caller_name,
+        caller_phone: draft.caller_phone, description: draft.description,
+        patients_count: draft.patients_count, is_sos: true,
+      });
+      dispatchBroadcast.send(DISPATCH_EVENTS.SOS_CREATED, incident);
+      refetchIncidents();
+      setSelectedIncident(incident);
+      setSosModalOpen(false);
+      setWizardOpen(true);
+    } catch (error) {
+      setSnackbar({ message: error.response?.data?.error || error.message || 'SOS could not be saved', severity: 'error' });
+      throw error;
+    }
+  }, [refetchIncidents]);
 
   const activeCount  = incidents.filter(i=>!['RESOLVED','CANCELLED'].includes(i.status)).length;
   const pendingCount = incidents.filter(i=>i.status==='PENDING').length;

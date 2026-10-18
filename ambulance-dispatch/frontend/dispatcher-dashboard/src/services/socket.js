@@ -1,6 +1,8 @@
 import { io } from 'socket.io-client';
+import { resolveApiUrl } from './apiClient';
 
-const SOCKET_URL = import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:3001';
+const SOCKET_URL = import.meta.env.VITE_WEBSOCKET_URL
+  ? resolveApiUrl(import.meta.env.VITE_WEBSOCKET_URL, import.meta.env.PROD) : null;
 
 class SocketService {
   constructor() {
@@ -9,6 +11,7 @@ class SocketService {
   }
 
   connect(token) {
+    if (!SOCKET_URL || !token) return null;
     if (this.socket?.connected) return this.socket;
 
     this.socket = io(SOCKET_URL, {

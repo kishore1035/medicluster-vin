@@ -196,8 +196,9 @@ export default function SOSAlertModal({ open, onClose, onSOSCreated }) {
           };
 
           console.log('[SOS Alert] Created Incident Object with Live Location:', newIncident);
-          onSOSCreated?.(newIncident);
-          setStep(3);
+          Promise.resolve(onSOSCreated?.(newIncident))
+            .then(() => setStep(3))
+            .catch(() => setStep(1));
         }
       }, 35);
       return () => clearInterval(timer);

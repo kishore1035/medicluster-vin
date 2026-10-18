@@ -23,19 +23,19 @@ export default function StatsCards({ stats, incidents, ambulances }) {
   const criticalCount  = open.filter(i => i.severity === 'CRITICAL').length;
   const availableCount = ambulances?.filter(a => a.status === 'AVAILABLE').length ?? 0;
   const totalAmbs      = ambulances?.length ?? 0;
-  const avgResp        = stats?.avgResponseTime ?? '8.5';
-  const resolved       = stats?.todayResolved ?? 12;
-  const improvement    = stats?.improvement ?? 23;
+  const avgResp        = stats?.avgResponseTime;
+  const resolved       = stats?.todayResolved;
+  const improvement    = stats?.improvement;
 
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '24px', width: '100%' }}>
       <Stat label="Active incidents" value={open.length}
         sub={criticalCount > 0 ? `${criticalCount} critical` : undefined} subColor={T.rT} />
       <Stat label="Units available" value={availableCount} sub={`of ${totalAmbs}`} />
-      <Stat label="Avg response" value={`${avgResp}m`} sub={`target ${RESPONSE_TARGET_MIN}m`}
+      <Stat label="Avg response" value={avgResp == null ? 'Unavailable' : `${avgResp}m`} sub={`target ${RESPONSE_TARGET_MIN}m`}
         subColor={Number(avgResp) <= RESPONSE_TARGET_MIN ? T.gT : T.rT} />
-      <Stat label="Resolved today" value={resolved}
-        sub={`${improvement >= 0 ? '+' : ''}${improvement}% vs avg`} subColor={improvement >= 0 ? T.gT : T.rT} />
+      <Stat label="Resolved today" value={resolved ?? 'Unavailable'}
+        sub={improvement == null ? undefined : `${improvement >= 0 ? '+' : ''}${improvement}% vs avg`} subColor={improvement >= 0 ? T.gT : T.rT} />
     </Box>
   );
 }

@@ -99,10 +99,14 @@ and PIN. The driver credentials migration records table setup but omits the SQL
 function bodies; restore `driver_pin_check` and `set_driver_pin` from the existing
 Supabase project when provisioning a new database.
 
-Some dispatch actions still use the REST API and Socket.IO services. Configure
-`VITE_API_URL` and `VITE_WEBSOCKET_URL` for those services and verify authentication
-compatibility before using those actions. Deploying the dashboard alone does not
-complete these integrations.
+Dispatch actions use the Supabase-backed REST API in `ambulance-dispatch/backend/api`.
+Deploy that Node service and set dashboard build variable `VITE_API_URL` to its
+HTTPS URL ending in `/api`. The API accepts existing Supabase sessions and reads
+the same CAD tables as the dashboard. Apply the new assignment/readiness SQL
+migration before checking backend health. Supabase Realtime handles shared fleet
+and incident updates; leave `VITE_WEBSOCKET_URL` unset for this deployment.
+The old MongoDB and Redis-backed Socket.IO entry points are not used by this setup.
+See [full dispatch Render setup](ambulance-dispatch/DEPLOY_RENDER.md).
 
 ## Deployment
 
@@ -111,6 +115,7 @@ complete these integrations.
 | MediCluster web + API | `medicluster` | Existing Dockerfile builds React and serves it from Express |
 | MediCluster ML | `medicluster/ml-engine` | Existing Dockerfile runs Gunicorn |
 | Dispatch dashboard + crew app | `ambulance-dispatch/frontend/dispatcher-dashboard` | Existing Dockerfile, or static build with `npm ci && npm run build`, publish `dist` |
+| Dispatch API | `ambulance-dispatch/backend/api` | Node service: `npm ci`, then `npm start`; health `/health` |
 
 Set backend secrets in the hosting provider, including `SUPABASE_URL`,
 `SUPABASE_SECRET_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`), `JWT_SECRET`,

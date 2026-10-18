@@ -6,22 +6,11 @@ import {
   Alert, TextField, FormControlLabel, Checkbox, Divider, Zoom
 } from '@mui/material';
 import { LocalTaxi, LocalHospital, Check, Star, CheckCircle } from '@mui/icons-material';
+import { formatDistanceKm, formatEta, formatHospitalScore } from '../services/recommendationDisplay';
+import { persistAssignment } from '../services/assignmentFlow';
 import { assignmentsApi, ambulancesApi, hospitalsApi } from '../services/api';
 
 const steps = ['Select Ambulance', 'Select Hospital', 'Confirm Assignment'];
-
-/* ── Mock data used when backend is offline ─────────────────── */
-const MOCK_AMBULANCES = [
-  { id: 'AMB-001', call_sign: 'Alpha-1', vehicle_number: 'MH-01-A-0001', type: 'ALS', status: 'AVAILABLE', eta_minutes: 4, distance: 2100, driver: 'Rajesh Kumar' },
-  { id: 'AMB-002', call_sign: 'Bravo-2', vehicle_number: 'MH-01-B-0002', type: 'BLS', status: 'AVAILABLE', eta_minutes: 7, distance: 3800, driver: 'Suresh Patel' },
-  { id: 'AMB-005', call_sign: 'Echo-5',  vehicle_number: 'MH-01-E-0005', type: 'ALS', status: 'AVAILABLE', eta_minutes: 11, distance: 5600, driver: 'Neha Verma' },
-];
-
-const MOCK_HOSPITALS = [
-  { id: 'H-001', name: 'City General Hospital',     available_beds: 24, icu_beds_available: 8,  total_score: 9.2, eta_minutes: 6,  score_breakdown: { proximity: 9.5, capacity: 9.0, specialty: 9.1 } },
-  { id: 'H-002', name: 'Apollo Trauma Centre',       available_beds: 12, icu_beds_available: 5,  total_score: 8.7, eta_minutes: 9,  score_breakdown: { proximity: 8.2, capacity: 9.0, specialty: 8.9 } },
-  { id: 'H-003', name: 'St. Mary\'s Medical Centre', available_beds: 31, icu_beds_available: 10, total_score: 8.1, eta_minutes: 14, score_breakdown: { proximity: 7.4, capacity: 9.2, specialty: 7.7 } },
-];
 
 /* ── Card styles ─────────────────────────────────────────────── */
 const cardSx = (selected) => ({
@@ -70,12 +59,12 @@ export default function AssignmentWizard({ open, onClose, incident, onAssignment
       ]);
       const ambs = ambRes.data.ambulances || ambRes.data || [];
       const hosps = hospRes.data.hospitals || hospRes.data || [];
-      setAmbulances(ambs.length ? ambs : MOCK_AMBULANCES);
-      setHospitals(hosps.length ? hosps : MOCK_HOSPITALS);
-    } catch {
-      // Backend offline — silently use mock data
-      setAmbulances(MOCK_AMBULANCES);
-      setHospitals(MOCK_HOSPITALS);
+      setAmbulances(Array.isArray(ambs) ? ambs : []);
+      setHospitals(Array.isArray(hosps) ? hosps : []);
+    } catch (error) {
+      setAmbulances([]);
+      setHospitals([]);
+      setError(error.response?.data?.error || 'Could not load dispatch recommendations. Please retry.');
     } finally {
       setLoading(false);
     }
@@ -93,23 +82,19 @@ export default function AssignmentWizard({ open, onClose, incident, onAssignment
     setSubmitting(true);
     setError(null);
     try {
-      await assignmentsApi.create({
+      await persistAssignment(assignmentsApi.create, {
         incident_id: incident.id,
         ambulance_id: selectedAmbulance.id,
         hospital_id: selectedHospital.id,
         notes,
         activate_green_corridor: activateGreenCorridor,
-      });
-    } catch {
-      // Backend offline — simulate success for demo
-    }
-    // Always show success in demo mode
-    setSubmitting(false);
-    setSuccess(true);
-    setTimeout(() => {
-      onAssignmentCreated?.({ ambulance: selectedAmbulance, hospital: selectedHospital });
+      }, () => onAssignmentCreated?.({ ambulance: selectedAmbulance, hospital: selectedHospital }));
       handleClose();
-    }, 2000);
+    } catch (error) {
+      setError(error.response?.data?.error || error.message || 'Assignment could not be saved. Please retry.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -133,8 +118,9 @@ export default function AssignmentWizard({ open, onClose, incident, onAssignment
   const renderAmbulanceSelection = () => (
     <Box>
       <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
-        Select an ambulance for this emergency. Sorted by ETA.
+        Select an ambulance for this emergency. Sorted by straight-line distance.
       </Typography>
+      {!ambulances.length && <Alert severity="info">No available ambulances found.</Alert>}
       <Grid container spacing={1.5}>
         {ambulances.slice(0, 6).map((amb, index) => {
           const selected = selectedAmbulance?.id === amb.id;
@@ -170,13 +156,13 @@ export default function AssignmentWizard({ open, onClose, incident, onAssignment
                       <Box>
                         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>ETA</Typography>
                         <Typography variant="body2" sx={{ color: '#22c55e', fontWeight: 700 }}>
-                          {amb.eta_minutes || Math.round(amb.distance / 500)} min
+                          {formatEta(amb.eta_minutes)}
                         </Typography>
                       </Box>
                       <Box>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>Distance</Typography>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>Straight-line distance</Typography>
                         <Typography variant="body2" sx={{ color: 'white' }}>
-                          {(amb.distance / 1000).toFixed(1)} km
+                          {formatDistanceKm(amb.distance)}
                         </Typography>
                       </Box>
                     </Box>
@@ -204,13 +190,12 @@ export default function AssignmentWizard({ open, onClose, incident, onAssignment
   const renderHospitalSelection = () => (
     <Box>
       <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
-        Select destination hospital. Sorted by multi-factor score.
+        Select destination hospital. Ranked by straight-line distance and available beds.
       </Typography>
+      {!hospitals.length && <Alert severity="info">No destination hospitals found.</Alert>}
       <Grid container spacing={1.5}>
         {hospitals.slice(0, 6).map((hosp, index) => {
           const selected = selectedHospital?.id === hosp.id;
-          const score = hosp.total_score;
-          const scoreColor = score >= 9 ? '#22c55e' : score >= 7 ? '#f59e0b' : '#ef4444';
           return (
             <Grid item xs={12} sm={6} key={hosp.id}>
               <Card sx={cardSx(selected)}>
@@ -226,21 +211,15 @@ export default function AssignmentWizard({ open, onClose, incident, onAssignment
                       )}
                     </Box>
 
-                    {/* Score bar */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <Box sx={{ flex: 1, height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                        <Box sx={{ width: `${(score / 10) * 100}%`, height: '100%', bgcolor: scoreColor, borderRadius: 2 }} />
-                      </Box>
-                      <Typography variant="caption" sx={{ color: scoreColor, fontWeight: 700, minWidth: 28 }}>
-                        {score?.toFixed(1) || 'N/A'}
-                      </Typography>
-                    </Box>
+                    <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'rgba(255,255,255,0.6)' }}>
+                      Ranking score: {formatHospitalScore(hosp.score)}
+                    </Typography>
 
                     <Box sx={{ display: 'flex', gap: 2 }}>
                       <Box>
                         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>ETA</Typography>
                         <Typography variant="body2" sx={{ color: '#22c55e', fontWeight: 700 }}>
-                          {hosp.eta_minutes || '?'} min
+                          {formatEta(hosp.eta_minutes)}
                         </Typography>
                       </Box>
                       <Box>
@@ -281,7 +260,7 @@ export default function AssignmentWizard({ open, onClose, incident, onAssignment
             badge: <Chip label={incident?.severity} size="small" sx={{ bgcolor: '#dc2626', color: 'white', height: 18, fontSize: '0.65rem' }} /> },
           { label: 'Ambulance', icon: '🚑', title: selectedAmbulance?.call_sign, sub: `Driver: ${selectedAmbulance?.driver || 'N/A'}`,
             badge: <Chip label={selectedAmbulance?.type} size="small" sx={{ bgcolor: 'rgba(139,92,246,0.3)', color: '#a78bfa', height: 18, fontSize: '0.65rem' }} /> },
-          { label: 'Hospital', icon: '🏥', title: selectedHospital?.name, sub: `ETA: ${selectedHospital?.eta_minutes} min · Beds: ${selectedHospital?.available_beds}`,
+          { label: 'Hospital', icon: '🏥', title: selectedHospital?.name, sub: `ETA: ${formatEta(selectedHospital?.eta_minutes)} · Beds: ${selectedHospital?.available_beds}`,
             badge: null },
         ].map(item => (
           <Grid item xs={12} sm={4} key={item.label}>
@@ -342,7 +321,7 @@ export default function AssignmentWizard({ open, onClose, incident, onAssignment
       <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
         {selectedAmbulance?.call_sign} dispatched to {incident?.incident_type}
       </Typography>
-      <Chip label={`ETA to scene: ${selectedAmbulance?.eta_minutes} min`}
+      <Chip label={`ETA to scene: ${formatEta(selectedAmbulance?.eta_minutes)}`}
         sx={{ bgcolor: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid #22c55e55' }} />
     </Box>
   );

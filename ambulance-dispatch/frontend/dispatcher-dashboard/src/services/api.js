@@ -1,31 +1,11 @@
-import axios from 'axios';
+import supabase from './supabase';
+import { createApiClient, resolveApiUrl } from './apiClient';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-const api = axios.create({
-  baseURL: API_URL,
-  timeout: 15000,
-  headers: { 'Content-Type': 'application/json' }
+const api = createApiClient({
+  auth: supabase.auth,
+  baseURL: resolveApiUrl(import.meta.env.VITE_API_URL, import.meta.env.PROD),
+  location: window.location,
 });
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
 
 // Auth API
 export const authApi = {
