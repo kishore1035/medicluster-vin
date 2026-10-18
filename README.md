@@ -37,7 +37,7 @@ Prerequisites: Node.js 20+, Python 3.10+, and the existing Supabase project.
 1. Copy `medicluster/backend/.env.example` to `medicluster/backend/.env`.
 2. Set `SUPABASE_URL`, backend-only `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`), a random `JWT_SECRET` of at least 32 characters, and `ML_ENGINE_URL=http://localhost:8080`.
 3. Install the additive SQL schema using [Supabase setup](medicluster/backend/supabase/README.md).
-4. Set `ALLOWED_EMAIL_DOMAINS` to the comma-separated work email domains permitted to register staff accounts.
+4. Set `ALLOWED_STAFF_EMAILS` to the exact email addresses permitted to register staff accounts (comma-separated). This overrides `ALLOWED_EMAIL_DOMAINS`; leave both unset to disable registration. Alternatively, use `ALLOWED_EMAIL_DOMAINS` for domain-based registration.
 5. Run each service in a separate terminal:
 
 ```bash

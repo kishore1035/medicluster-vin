@@ -20,13 +20,21 @@ const DUMMY_HASH = bcrypt.hashSync("medicluster-dummy-password", 10);
 
 const normEmail = (v) => (typeof v === "string" ? v.trim().toLowerCase() : "");
 
-// Self-service accounts are limited to hospital email domains listed in
-// ALLOWED_EMAIL_DOMAINS (comma-separated). Unset means nobody can self-register.
+// An exact-email list takes priority over domain access. With neither configured,
+// nobody can self-register. Existing accounts can still sign in.
 function allowedDomains() {
   return (process.env.ALLOWED_EMAIL_DOMAINS || "")
     .split(",")
     .map((d) => d.trim().toLowerCase())
     .filter(Boolean);
+}
+
+function canRegister(email) {
+  const exactEmails = (process.env.ALLOWED_STAFF_EMAILS || '')
+    .split(',').map(normEmail).filter(Boolean);
+  return exactEmails.length > 0
+    ? exactEmails.includes(email)
+    : allowedDomains().includes(email.split('@')[1]);
 }
 
 // ── POST /api/auth/register ─────────────────────────────────────────────────
@@ -37,8 +45,8 @@ router.post("/register", async (req, res, next) => {
     const { password } = req.body;
 
     if (!EMAIL_RE.test(email)) return res.status(400).json({ error: "Enter a valid work email" });
-    if (!allowedDomains().includes(email.split("@")[1])) {
-      return res.status(403).json({ error: "This email domain isn't enabled for MediCluster. Ask your administrator for access." });
+    if (!canRegister(email)) {
+      return res.status(403).json({ error: "This email isn't enabled for MediCluster. Ask your administrator for access." });
     }
     if (!name) return res.status(400).json({ error: "Enter your name" });
     if (typeof password !== "string" || password.length < MIN_PASSWORD || Buffer.byteLength(password) > MAX_PASSWORD) {

@@ -6,9 +6,10 @@ const { signPatientToken } = require('../middleware/auth');
 
 test('Supabase supports staff login, clinic-linked patients, reminders and protected clinical data', async t => {
   await createTestDatabase(t);
-  const previous = { JWT_SECRET: process.env.JWT_SECRET, ALLOWED_EMAIL_DOMAINS: process.env.ALLOWED_EMAIL_DOMAINS };
+  const previous = { JWT_SECRET: process.env.JWT_SECRET, ALLOWED_EMAIL_DOMAINS: process.env.ALLOWED_EMAIL_DOMAINS, ALLOWED_STAFF_EMAILS: process.env.ALLOWED_STAFF_EMAILS };
   process.env.JWT_SECRET = 'test-supabase-clinical-jwt-secret-at-least-32-characters';
   process.env.ALLOWED_EMAIL_DOMAINS = 'clinic.example';
+  delete process.env.ALLOWED_STAFF_EMAILS;
   t.after(() => { for (const [key,value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key]=value; } });
   const app = express(); app.use(express.json());
   app.use('/auth', require('../routes/authRoutes'));
@@ -28,6 +29,19 @@ test('Supabase supports staff login, clinic-linked patients, reminders and prote
   const staff=login.body.token;
   assert.equal((await call('/auth/me','GET',null,staff)).status,200);
   assert.equal((await call('/auth/login','POST',{email:'staff@clinic.example',password:'wrong-password'})).status,401);
+  await t.test('exact staff email list overrides domain access and rejects other Gmail accounts', async () => {
+    process.env.ALLOWED_EMAIL_DOMAINS = 'gmail.com,clinic.example';
+    process.env.ALLOWED_STAFF_EMAILS = '  Owner@Gmail.com  ';
+    const allowed = await call('/auth/register','POST',{name:'Owner',email:' OWNER@gmail.com ',password:'owner-test-password'});
+    assert.equal(allowed.status,201,JSON.stringify(allowed.body));
+    assert.equal((await call('/auth/login','POST',{email:'owner@gmail.com',password:'owner-test-password'})).status,200);
+    for (const email of ['other@gmail.com','new@clinic.example','owner+other@gmail.com','owner@gmail.com.evil.example']) {
+      assert.equal((await call('/auth/register','POST',{name:'Other',email,password:'other-test-password'})).status,403,email);
+    }
+    delete process.env.ALLOWED_STAFF_EMAILS;
+    process.env.ALLOWED_EMAIL_DOMAINS = '';
+    assert.equal((await call('/auth/register','POST',{name:'Other',email:'closed@gmail.com',password:'other-test-password'})).status,403);
+  });
   assert.equal((await call('/patients/P-1/profile','PUT',{name:'Patient One',email:'patient@example.com',mobile:'9000000091'},staff)).status,200);
   const patient=signPatientToken('P-1');
   const other=signPatientToken('P-2');
