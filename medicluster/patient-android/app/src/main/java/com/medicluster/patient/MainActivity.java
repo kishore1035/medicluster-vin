@@ -145,13 +145,45 @@ public final class MainActivity extends Activity {
         if (savedState != null && policy.isPatientPage(savedState.getString("patientUrl"))) {
             lastPatientUrl = savedState.getString("patientUrl");
         }
+        String googleReturnUrl = consumeGoogleReturn(getIntent());
+        if (googleReturnUrl != null) lastPatientUrl = googleReturnUrl;
         web.loadUrl(lastPatientUrl);
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String googleReturnUrl = consumeGoogleReturn(intent);
+        if (googleReturnUrl != null) {
+            // Keep this WebView and its localStorage PKCE verifier when the browser returns.
+            lastPatientUrl = googleReturnUrl;
+            web.loadUrl(googleReturnUrl);
+        }
+    }
+
+    private String consumeGoogleReturn(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return null;
+        Uri data = intent.getData();
+        // Do not replay a consumed one-time code if Android recreates this activity.
+        setIntent(new Intent(intent).setData(null));
+        return data == null ? null : policy.patientUrlFromGoogleReturn(data.toString());
     }
 
     private boolean handleNavigation(Uri uri, boolean mainFrame) {
         String url = uri.toString();
         if (policy.isPatientPage(url)) return false;
         if (!mainFrame) return true;
+        if (policy.isGoogleAuthStart(url)) {
+            // Google's web OAuth flow must run in the system browser, never this WebView.
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                startActivity(intent);
+            } catch (ActivityNotFoundException e) {
+                Toast.makeText(this, "No browser can open Google sign-in", Toast.LENGTH_LONG).show();
+            }
+            return true;
+        }
         String scheme = uri.getScheme();
         // Maps and phone calls leave the patient app. Staff routes on our own host stay blocked.
         boolean externalHttps = "https".equalsIgnoreCase(scheme)
@@ -207,6 +239,14 @@ public final class MainActivity extends Activity {
 
     @Override public void onBackPressed() {
         if (web.canGoBack()) web.goBack(); else super.onBackPressed();
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (web != null) {
+            // Let the page recover if the browser was dismissed without a Google callback.
+            web.evaluateJavascript("window.dispatchEvent(new Event('medicluster:patient-resumed'));", null);
+        }
     }
 
     @Override protected void onPause() {

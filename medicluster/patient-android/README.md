@@ -2,8 +2,10 @@
 
 Installable Android 8.0+ app for patients. It opens the existing HTTPS patient portal,
 not clinician or dispatch screens. Internet is required. It uses the same linked-mobile
-OTP login and patient API authorization as the website; SMS delivery must be configured
-separately. Installing the APK does not configure SMS or background medicine alerts.
+OTP login and patient API authorization as the website. The website also supports linked
+email OTP and Google sign-in when configured on the server. SMS and EmailJS delivery
+must be configured separately. Installing the APK does not configure authentication
+providers or background medicine alerts.
 
 ## Design
 
@@ -12,6 +14,32 @@ Patient routes stay in the app. Phone calls open the dialer; external HTTPS link
 another app. Non-patient routes on the clinic origin are blocked. The frontend recognizes
 the shell's user agent to hide staff links and the desktop phone frame. This hint is for
 presentation, not authentication. There is no JavaScript-to-native bridge.
+
+Google sign-in leaves the WebView for the system browser through the exact configured
+HTTPS `/api/patient-auth/google/start?platform=android&handoff_challenge=…` endpoint.
+The frontend stores a separate PKCE verifier in this WebView's localStorage and supplies
+its 43-character base64url SHA-256 challenge. All other staff and API navigation on the
+clinic origin remains blocked. The start URL and query reach the browser unchanged.
+
+Configure Google OAuth as a **web application**, with the server's HTTPS callback as
+an authorized redirect URI. Google client credentials and EmailJS credentials belong
+on the server, never in the APK. The server finishes Google OAuth before redirecting to
+our own `mediclusterpatient://google-return?code=…` app handoff; the custom scheme is
+not Google's OAuth redirect URI. Only a 64-character hexadecimal, short-lived, one-time
+handoff code or a known authentication error is accepted. The app constructs its own
+HTTPS `/app?patient_auth_code=…` (or `auth_error=…`) URL. Tokens and arbitrary return
+destinations are rejected.
+
+The activity handles both a cold launch and a return to the running app. A running
+WebView and its localStorage are preserved. Ordinary resume emits the fixed
+`medicluster:patient-resumed` page event so the frontend can recover when the browser
+is dismissed without completing sign-in; it does not reload the page or pass any data.
+The frontend must redeem the code with its
+stored verifier; custom schemes can be claimed by other installed apps, so the server
+must require that verifier and expire handoff codes. Clearing app data or losing the
+verifier requires starting sign-in again. A browser and configured Google web OAuth
+credentials are required; the APK alone cannot enable Google sign-in. Browser-to-app
+return and account selection still need verification on a physical Android device.
 
 Location permission is requested only for the configured HTTPS origin. Denying permission
 leaves the rest of the portal usable. Photo selection uses Android's picker. HTTPS errors

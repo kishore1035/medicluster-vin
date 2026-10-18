@@ -17,8 +17,9 @@ Patients can install **MediCluster Patient** on Android 8.0 or later. Open the
 patient portal at `/app` and select **Download Android app**. The installer is
 available from `/download`. Old direct APK links redirect to that page to stop
 cold-start retries from triggering repeated downloads.
-It opens patient screens only and uses the existing mobile-number/OTP login.
-Internet is required; SMS delivery must be configured separately.
+It opens patient screens only and supports email codes, Google sign-in, and mobile-number OTP.
+Internet is required; [EmailJS and Google configuration](backend/PATIENT_AUTH.md) and SMS delivery
+must be configured separately. Google browser return requires the updated native installer.
 
 Source, signing, and rebuild instructions are in [patient-android/README.md](patient-android/README.md).
 

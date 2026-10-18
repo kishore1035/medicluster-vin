@@ -9,6 +9,7 @@ const Reading = require("../models/Reading");
 
 const { requirePatientOrClinician, canAccessPatient } = require("../middleware/auth");
 const { normalizeMobile } = require("./patientAuthRoutes");
+const { normalizeEmail, validEmail } = require('../services/patientIdentity');
 
 const router = express.Router();
 
@@ -44,6 +45,15 @@ router.put("/:patientId/profile", async (req, res, next) => {
       update.mobile = mobile;
     }
   }
+  if (req.body.email !== undefined && req.session.kind === 'clinician') {
+    if (req.body.email === '') ops.$unset = { ...(ops.$unset || {}), email: 1, googleSubject: 1 };
+    else {
+      const email = normalizeEmail(req.body.email);
+      if (!validEmail(email)) return res.status(400).json({ error: 'Enter a valid email address' });
+      update.email = email;
+      ops.$unset = { ...(ops.$unset || {}), googleSubject: 1 };
+    }
+  }
   try {
     const profile = await PatientProfile.findOneAndUpdate(
       { patientId: req.params.patientId },
@@ -52,7 +62,7 @@ router.put("/:patientId/profile", async (req, res, next) => {
     ).lean();
     return res.json(profile);
   } catch (err) {
-    if (err.code === 11000) return res.status(409).json({ error: "That number is already linked to another patient" });
+    if (err.code === 11000) return res.status(409).json({ error: "That contact detail is already linked to another patient" });
     return next(err);
   }
 });

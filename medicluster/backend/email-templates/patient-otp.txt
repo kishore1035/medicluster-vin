@@ -1,0 +1,13 @@
+MediCluster — Your sign-in code
+
+Your care. One code away.
+
+Enter this code in MediCluster to sign in to your patient account:
+{{passcode}}
+
+Valid for 5 minutes. Expires at {{time}}.
+
+Keep this code to yourself. MediCluster will never ask you to share it.
+If you didn't request this email, you can ignore it.
+
+MediCluster Patient — Care, connected.

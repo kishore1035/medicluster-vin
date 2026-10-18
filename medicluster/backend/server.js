@@ -38,7 +38,8 @@ app.use(cors({ origin: CORS_ORIGINS }));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use((req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  const url = req.path.startsWith('/api/patient-auth') ? req.path : req.url;
+  console.log(`[${new Date().toISOString()}] ${req.method} ${url}`);
   next();
 });
 // ── Routes ────────────────────────────────────────────────────────────────────
@@ -48,6 +49,7 @@ app.use(require('./routes/patientInstallerRoutes')(
 ));
 app.use("/api/auth",    authRoutes);
 app.use("/api/patient-auth", patientAuthRoutes);
+app.use("/api/sms-gateway", require('./routes/smsGatewayRoutes'));
 // Clinician-only data. Patient-app and dispatch endpoints stay unauthenticated.
 app.use("/api/data",    requireAuth, dataRoutes);
 app.use("/api/cluster", requireAuth, clusterRoutes);

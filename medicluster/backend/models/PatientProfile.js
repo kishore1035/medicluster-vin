@@ -11,6 +11,8 @@ const PatientProfileSchema = new mongoose.Schema(
     name:      { type: String, default: "" },
     // Mobile number (10 digits, no country code) the clinic linked for patient-app sign-in.
     mobile:    { type: String, default: undefined, index: { unique: true, sparse: true } },
+    email:     { type: String, lowercase: true, trim: true, default: undefined, index: { unique: true, sparse: true } },
+    googleSubject: { type: String, default: undefined, select: false, index: { unique: true, sparse: true } },
     nextVisit: {
       at:       { type: Date, default: null },
       doctor:   { type: String, default: "" },

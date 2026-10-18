@@ -1,0 +1,4 @@
+<resources>
+    <string name="start_sender">Start sender</string>
+    <string name="stop_sender">Stop sender</string>
+</resources>

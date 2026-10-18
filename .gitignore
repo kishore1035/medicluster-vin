@@ -38,3 +38,8 @@ env/
 
 # Browser test artifacts
 .playwright-mcp/
+
+# Local Android tooling and sender installer
+.gradle/
+local.properties
+medicluster/frontend/public/downloads/medicluster-sms-sender.apk

@@ -62,8 +62,11 @@ npm run dev
 ```
 
 Open `http://localhost:3000/login` for staff or `http://localhost:3000/app` for patients.
-Patient sign-in requires a clinic-linked mobile number. SMS delivery is not implemented;
-`OTP_DEV_LOG=true` enables server-log codes for development only.
+Patient sign-in supports clinic-linked email codes, Google accounts, and mobile
+numbers. See [EmailJS and Google setup](medicluster/backend/PATIENT_AUTH.md), including
+the [branded OTP email template](medicluster/backend/email-templates/patient-otp.html).
+For SMS through an Android phone and SIM, see [SMS Sender setup](medicluster/sms-sender-android/README.md).
+`OTP_DEV_LOG=true` enables server-log codes for local development when Android mode is disabled.
 
 ## Dispatch setup
 

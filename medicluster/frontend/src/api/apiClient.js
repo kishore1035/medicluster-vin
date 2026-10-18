@@ -61,6 +61,26 @@ export async function verifyPatientCode(mobile, code) {
   return res.data;
 }
 
+export async function getPatientAuthConfig() {
+  const res = await api.get("/patient-auth/config");
+  return res.data;
+}
+
+export async function requestPatientEmailCode(email) {
+  const res = await api.post("/patient-auth/request-email-code", { email });
+  return res.data;
+}
+
+export async function verifyPatientEmailCode(email, code) {
+  const res = await api.post("/patient-auth/verify-email", { email, code });
+  return res.data;
+}
+
+export async function exchangePatientGoogleCode(code, verifier) {
+  const res = await api.post("/patient-auth/google/exchange", { code, verifier });
+  return res.data;
+}
+
 export async function login(email, password) {
   const res = await api.post("/auth/login", { email, password });
   return res.data;

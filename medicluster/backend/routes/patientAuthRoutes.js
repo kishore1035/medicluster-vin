@@ -9,6 +9,7 @@ const bcrypt = require("bcryptjs");
 const PatientOtp = require("../models/PatientOtp");
 const PatientProfile = require("../models/PatientProfile");
 const { signPatientToken } = require("../middleware/auth");
+const { deliverCode } = require("../services/otpDelivery");
 
 const router = express.Router();
 
@@ -22,20 +23,6 @@ function normalizeMobile(raw) {
   const digits = String(raw || "").replace(/\D/g, "");
   const local = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
   return /^[6-9]\d{9}$/.test(local) ? local : null;
-}
-
-const masked = (m) => `******${m.slice(-4)}`;
-
-// No SMS provider is wired up yet. Codes are only written to the server log when OTP_DEV_LOG=true
-// (local development); otherwise sign-in reports that SMS isn't configured.
-async function deliverCode(mobile, code) {
-  if (process.env.OTP_DEV_LOG === "true") {
-    console.log(`[patient-otp] code for ${masked(mobile)}: ${code}`);
-    return;
-  }
-  const err = new Error("Text-message sign-in isn't configured yet. Ask your clinic for help.");
-  err.status = 503;
-  throw err;
 }
 
 // ── POST /api/patient-auth/request-code  { mobile } ─────────────────────────
@@ -57,10 +44,16 @@ router.post("/request-code", async (req, res, next) => {
     // Unlinked numbers get a record too, but no code is sent and verify finds no patient.
     const linked = await PatientProfile.exists({ mobile });
     const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
-    if (linked) await deliverCode(mobile, code);
-    await PatientOtp.create({ mobile, codeHash: await bcrypt.hash(code, 10), expiresAt: new Date(Date.now() + CODE_TTL_MS) });
+    const otp = await PatientOtp.create({ mobile, codeHash: await bcrypt.hash(code, 10), expiresAt: new Date(Date.now() + CODE_TTL_MS) });
+    try {
+      if (linked) await deliverCode(mobile, code, otp);
+    } catch (error) {
+      await PatientOtp.deleteOne({ _id: otp._id });
+      throw error;
+    }
     return res.json({ sent: true, resendAfterSeconds: RESEND_AFTER_MS / 1000 });
   } catch (err) {
+    if (err.code === 'OTP_DELIVERY_UNAVAILABLE') return res.status(503).json({ error: err.message });
     return next(err);
   }
 });
@@ -77,12 +70,13 @@ router.post("/verify", async (req, res, next) => {
     if (otp.attempts >= MAX_ATTEMPTS) return res.status(429).json({ error: "Too many wrong attempts. Request a new code." });
 
     if (!(await bcrypt.compare(code, otp.codeHash))) {
-      otp.attempts += 1;
-      await otp.save();
+      await PatientOtp.updateOne({ _id: otp._id, usedAt: null }, { $inc: { attempts: 1 } });
       return res.status(401).json({ error: "That code isn't right" });
     }
-    otp.usedAt = new Date();
-    await otp.save();
+    const consumed = await PatientOtp.findOneAndUpdate({
+      _id: otp._id, usedAt: null, attempts: { $lt: MAX_ATTEMPTS }, expiresAt: { $gt: new Date() },
+    }, { $set: { usedAt: new Date() } });
+    if (!consumed) return res.status(401).json({ error: "That code has expired. Request a new one." });
 
     const profile = await PatientProfile.findOne({ mobile }).lean();
     if (!profile) return res.status(404).json({ error: "No patient record is linked to this number" });
@@ -91,6 +85,8 @@ router.post("/verify", async (req, res, next) => {
     return next(err);
   }
 });
+
+router.use(require('./patientIdentityRoutes'));
 
 module.exports = router;
 module.exports.normalizeMobile = normalizeMobile;
