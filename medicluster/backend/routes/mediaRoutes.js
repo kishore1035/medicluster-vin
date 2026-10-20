@@ -595,7 +595,87 @@ When analyzing a medical image, structure your response with these exact section
       ...(question.trim() ? [`User: ${question.trim()}`] : []),
     ].join("\n\n");
 
-    // Text-only symptom question (no photo attached).
+    // ── Primary Path: OmniRoute Proxy (Dedicated CliniQ Chatbot Route) ───────
+    let omniRouteKey = process.env.OMNIROUTE_API_KEY || "sk-83ef8c640f53be5d-74e79d-e4fe3585";
+    try {
+      const config = await SystemConfig.findOne({ key: "omniRouteKey" });
+      if (config && config.value) {
+        omniRouteKey = config.value;
+      }
+    } catch {}
+
+    const omniRouteUrl = process.env.OMNIROUTE_URL || "http://localhost:20128";
+
+    if (omniRouteKey) {
+      try {
+        const isVision = Boolean(imageBase64);
+        const candidates = isVision
+          ? ["agy/gemini-3.1-flash-lite", "agy/claude-sonnet-4-6"]
+          : ["agy/gemini-3.1-flash-lite", "smart", "best-reasoning"];
+
+        const userText = question.trim() || (isVision
+          ? "Please analyze this medical image. Tell me what condition is visible, how to prevent it, how to treat it, and what medications are commonly used."
+          : "Please assess these symptoms and advise on possible conditions, care steps, and recommended specialist.");
+
+        const textSystem = systemPrompt.replace("When analyzing a medical image", "When answering a patient's symptom question");
+
+        const messages = [
+          { role: "system", content: isVision ? systemPrompt : textSystem },
+          ...chatHistory.map((m) => ({
+            role: m.role === "assistant" ? "assistant" : "user",
+            content: m.content
+          })),
+          {
+            role: "user",
+            content: isVision
+              ? [
+                  { type: "text", text: userText },
+                  { type: "image_url", image_url: { url: `data:${type};base64,${imageBase64}` } }
+                ]
+              : userText
+          }
+        ];
+
+        for (const candidateModel of candidates) {
+          try {
+            console.log(`[CliniQ] Routing chat via OmniRoute (${candidateModel})...`);
+            const response = await axios.post(
+              `${omniRouteUrl}/v1/chat/completions`,
+              {
+                model: candidateModel,
+                messages,
+                max_tokens: 1500,
+                temperature: 0.2
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${omniRouteKey}`,
+                  "Content-Type": "application/json"
+                },
+                timeout: 30000
+              }
+            );
+
+            const reply = response.data?.choices?.[0]?.message?.content;
+            if (reply && reply.trim()) {
+              console.log(`[CliniQ] Successfully received OmniRoute response using ${candidateModel}`);
+              const enrichedReply = await enrichReplyWithHospitals(reply, location);
+              return res.json({
+                reply: enrichedReply.trim(),
+                model: candidateModel,
+                provider: "omniroute"
+              });
+            }
+          } catch (modelErr) {
+            console.warn(`[CliniQ] OmniRoute model ${candidateModel} failed:`, modelErr.response?.data?.error?.message || modelErr.message);
+          }
+        }
+      } catch (omniErr) {
+        console.error("[CliniQ] OmniRoute service error, proceeding to fallbacks:", omniErr.message);
+      }
+    }
+
+    // Text-only symptom question fallback (Ollama)
     if (!imageBase64) {
       const textSystem = systemPrompt.replace("When analyzing a medical image", "When answering a patient's symptom question");
       try {
