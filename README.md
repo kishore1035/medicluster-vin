@@ -70,6 +70,33 @@ the [branded OTP email template](medicluster/backend/email-templates/patient-otp
 For SMS through an Android phone and SIM, see [SMS Sender setup](medicluster/sms-sender-android/README.md).
 `OTP_DEV_LOG=true` enables server-log codes for local development when Android mode is disabled.
 
+### Local brain MRI analysis
+
+Imaging supports a separate **Brain MRI** scan type through the existing
+Brain Health Monitor service. Its TensorFlow Lite runtime preserves the model's
+class ordering and preprocessing without requiring TensorFlow in the MediCluster
+ML environment. Chest X-ray models continue using `ML_ENGINE_URL`.
+
+Start the existing workstation in its own terminal:
+
+```bash
+cd /home/vinay/Documents/brain_health_monitor
+BHM_HOST=127.0.0.1 BHM_PORT=8001 BHM_MAX_UPLOAD_BYTES=52428800 .venv/bin/python server.py
+```
+
+Set `BRAIN_MRI_URL=http://127.0.0.1:8001` in `medicluster/backend/.env` and
+restart the backend. Check `http://127.0.0.1:8001/api/ready` for readiness.
+Then open `/imaging`, select **Brain MRI**, enter a patient ID, upload a single
+MRI slice, and select **Run analysis**. JPEG, PNG, WebP, BMP, TIFF and single-frame
+grayscale MR DICOM are supported. Results include all four class scores (glioma,
+meningioma, no tumor and pituitary tumor), and a Grad-CAM overlay when available.
+The optional `BHM_MODEL_DIR` setting selects another compatible artifact directory;
+the workstation uses its existing `model/` directory by default.
+
+This is a research classifier, not a confirmed diagnosis. Grad-CAM represents
+model attention, not lesion segmentation. Its sample images are in the
+workstation's `static/samples/` directory. Model weights remain in that project.
+
 ## Dispatch setup
 
 The dispatcher dashboard uses Supabase Auth, database tables, Realtime, and the
@@ -160,3 +187,66 @@ Supabase service-role key.
 
 Application-specific READMEs, deployment files, sample data, migrations, and tests
 remain alongside their respective services.
+
+### Local 3D Tumor Explorer and Deterioration Radar
+
+Clinician navigation → **Analyze → 3D Tumor Explorer** or **Deterioration Radar**.
+Both require clinician sign-in and the local intelligence worker at `127.0.0.1:8090`.
+Set matching `INTELLIGENCE_TOKEN` secrets in backend and worker `.env` files; set
+backend `INTELLIGENCE_URL=http://127.0.0.1:8090`. Never put this secret in Vite variables.
+
+Run from `medicluster/intelligence-engine`: `.venv/bin/python app.py`.
+Model checkpoints and patient artifacts remain in ignored `.models/` and `.runtime/`
+directories. Protect and back up the latter when retaining real research data.
+
+**Brain:** upload a single-channel 3D `.nii`/`.nii.gz` MRI with declared spatial units,
+or load a clearly labelled local UCSF-PDGM demonstration case. Add positive/negative
+lesion points on the axial slice, then run SAM-Med3D-turbo. Rotate/zoom the 3D surface,
+inspect orthogonal overlays, adjust brain opacity, and download the predicted NIfTI
+mask. Volume uses foreground voxel count and physical affine determinant. Compare
+segmented studies with the same patient identifier and distinct scan dates; comparison
+reports volume change only, without spatial registration. Demo seed points come from
+provider annotations and are disclosed; reference masks never become model predictions.
+The existing four-class Brain Health Monitor classifier remains a separate slice action.
+Prompted segmentation does not establish tumor type or universal tumor coverage.
+
+**Radar:** create a simulated scenario or an empty manual session. Add complete vital
+measurements manually or through CSV, replay any prefix, then forecast with local
+pretrained Chronos-2. Charts show six signals and 10th/50th/90th quantiles. Adult
+reference-score contributors stay separate from forecasts; neither constitutes a
+validated deterioration probability. Irregular timing produces next-reading forecasts,
+without unsupported minute-based horizons. Exports include source and assumptions.
+No generated fallback is shown as a model result when inference is unavailable.
+
+Checkpoint provenance, licenses and SHA-256 values are recorded locally in
+`.models/provenance.json`. Upstream projects:
+[SAM-Med3D](https://github.com/uni-medical/SAM-Med3D) and
+[Chronos-2](https://huggingface.co/amazon/chronos-2), both Apache-2.0.
+
+### Chest X-ray worker
+
+Chest imaging runs independently of the Python 3.14 tabular/NLP server. Create its
+Python 3.12 environment once:
+
+```sh
+uv venv --python 3.12 medicluster/ml-engine/.venv-imaging
+uv pip install --python medicluster/ml-engine/.venv-imaging/bin/python -r medicluster/ml-engine/requirements-imaging.txt
+cd medicluster/ml-engine
+.venv-imaging/bin/python download_imaging_models.py
+.venv-imaging/bin/python imaging_server.py
+```
+
+Set backend `CHEST_IMAGING_URL=http://127.0.0.1:8091` and restart the Node backend.
+The worker serves model discovery, inference and Grad-CAM. Other ML/NLP endpoints
+continue using `ML_ENGINE_URL`. If `CHEST_IMAGING_URL` is unset, imaging retains its
+previous ML-engine routing for existing deployments.
+
+Five official TorchXRayVision checkpoints download to
+`~/.torchxrayvision/models_data/`; the downloader validates release sizes, writes
+files atomically, and records SHA-256/source provenance there. The default is
+`densenet121-res224-all`. Model scores retain the library's native sigmoid and
+operating-point normalization; the app does not apply another sigmoid.
+
+Use **Imaging → Chest X-ray → Upload images → Run analysis**, then **Show Grad-CAM
+region** to inspect the selected finding. Brain MRI continues using the separate
+Brain Health Monitor adapter.

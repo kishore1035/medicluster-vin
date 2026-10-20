@@ -7,6 +7,8 @@ const { execFile } = require("child_process");
 const path = require("path");
 const PatientMedia = require("../models/PatientMedia");
 const SystemConfig = require("../models/SystemConfig");
+const brainMri = require("../services/brainMri");
+const { requireAuth } = require("../middleware/auth");
 const {
   chatText,
   chatVision,
@@ -16,6 +18,8 @@ const {
 } = require("../utils/ollamaClient");
 
 const ML_ENGINE_URL = process.env.ML_ENGINE_URL || "http://localhost:8080";
+const IMAGING_ENGINE_URL = process.env.CHEST_IMAGING_URL || ML_ENGINE_URL;
+const { DETECTOR_ID, validateLocalization } = require("../services/chestLocalization");
 
 const router = express.Router();
 
@@ -94,6 +98,8 @@ const ALLOWED_MIMETYPES = new Set([
   "image/png",
   "image/gif",
   "image/webp",
+  "image/bmp",
+  "image/tiff",
   "application/dicom",
   "application/pdf",
   "application/msword",
@@ -127,8 +133,9 @@ function getFileType(mimetype, originalname = "") {
 
 // GET /api/media/models — proxy model list from ML engine
 router.get("/models", async (_req, res, next) => {
+  const brainModels = process.env.BRAIN_MRI_URL ? [brainMri.MODEL] : [];
   try {
-    const r = await axios.get(`${ML_ENGINE_URL}/models`, { timeout: 5000 });
+    const r = await axios.get(`${IMAGING_ENGINE_URL}/models`, { timeout: 5000 });
     const mlModels = Array.isArray(r.data?.models) ? r.data.models : [];
     const mlDefault = r.data?.default;
 
@@ -139,11 +146,13 @@ router.get("/models", async (_req, res, next) => {
     // real backend handler.
     res.json({
       models: [
-        ...mlModels,
+        ...mlModels.map(model => ({ ...model, modality: "chest-xray" })),
+        ...brainModels,
         {
           id: "claude-vision",
           label: "Ollama Vision (LungLens · Claude-vision alias)",
           size: 224,
+          modality: "chest-xray",
         },
       ],
       default: mlDefault || "densenet121-res224-all",
@@ -151,8 +160,9 @@ router.get("/models", async (_req, res, next) => {
   } catch {
     res.json({
       models: [
-        { id: "densenet121-res224-all", label: "DenseNet121 · All datasets", size: 224 },
-        { id: "claude-vision", label: "Ollama Vision (LungLens)", size: 224 },
+        { id: "densenet121-res224-all", label: "DenseNet121 · All datasets", size: 224, modality: "chest-xray" },
+        { id: "claude-vision", label: "Ollama Vision (LungLens)", size: 224, modality: "chest-xray" },
+        ...brainModels,
       ],
       default: "densenet121-res224-all",
     });
@@ -248,6 +258,27 @@ router.delete("/file/:fileId", async (req, res, next) => {
   }
 });
 
+// GET /api/media/preview/:fileId — decoded DICOM preview with source aspect ratio.
+router.get("/preview/:fileId", async (req, res, next) => {
+  try {
+    if (!isValidId(req.params.fileId)) return res.status(400).json({ error: "Invalid file ID" });
+    const media = await PatientMedia.findOne({ gridfs_id: req.params.fileId.toLowerCase() });
+    if (!media) return res.status(404).json({ error: "File not found" });
+    if (media.file_type !== "image") return res.status(400).json({ error: "Image preview required" });
+    const bytes = await mediaStorage.readObject(media);
+    const response = await axios.post(`${IMAGING_ENGINE_URL}/preview-image`, {
+      image_b64: bytes.toString("base64"), filename: media.original_name,
+    }, { timeout: 60_000, responseType: "arraybuffer" });
+    if (!(response.headers['content-type'] || '').startsWith('image/png')) {
+      return res.status(502).json({ error: "Invalid image preview response" });
+    }
+    res.set('Cache-Control', 'no-store').type('png').send(Buffer.from(response.data));
+  } catch (error) {
+    if (error.isAxiosError) return res.status(error.response?.status === 422 ? 422 : 503).json({ error: "Image preview is unavailable" });
+    next(error);
+  }
+});
+
 // POST /api/media/analyze/:fileId  — run DL analysis on an image (must be before /:patientId)
 router.post("/analyze/:fileId", async (req, res, next) => {
   try {
@@ -261,13 +292,15 @@ router.post("/analyze/:fileId", async (req, res, next) => {
     if (media.file_type !== "image")
       return res.status(400).json({ error: "Only images can be analyzed" });
 
-    const imageB64 = (await mediaStorage.readObject(media)).toString("base64");
+    const imageBytes = await mediaStorage.readObject(media);
 
     const model_name = req.body.model_name || "densenet121-res224-all";
 
     let analysis;
 
-    if (model_name === "claude-vision") {
+    if (model_name === brainMri.MODEL_ID) {
+      analysis = await brainMri.analyzeBrainMri(imageBytes, media.original_name, media.mimetype);
+    } else if (model_name === "claude-vision") {
       // ── Ollama vision analysis (was: Claude Vision) ─────────────────────────
       if (!ollamaConfigured()) return res.status(500).json({ error: "Ollama is not configured. Set OLLAMA_URL and (for cloud) OLLAMA_API_KEY." });
 
@@ -302,7 +335,7 @@ Rules:
       try {
         const { reply } = await chatVision({
           prompt,
-          imageB64,
+          imageB64: imageBytes.toString("base64"),
           mediaType,
           maxTokens: 1500,
         });
@@ -325,28 +358,80 @@ Rules:
       };
     } else {
       // ── ML engine (DenseNet / ResNet) analysis ─────────────────────────────
-      const mlRes = await axios.post(
-        `${ML_ENGINE_URL}/analyze-image`,
-        { image_b64: imageB64, model_name, filename: media.original_name },
-        { timeout: 120_000 }
-      );
+      let mlRes;
+      try {
+        mlRes = await axios.post(
+          `${IMAGING_ENGINE_URL}/analyze-image`,
+          { image_b64: imageBytes.toString("base64"), model_name, filename: media.original_name },
+          { timeout: 120_000 }
+        );
+      } catch (error) {
+        if (!error.response || error.response.status >= 500) {
+          return res.status(503).json({ error: "Chest X-ray analysis is unavailable. For brain scans, select Scan type → Brain MRI and run analysis again." });
+        }
+        throw error;
+      }
 
       analysis = {
         findings:     mlRes.data.findings,
         model:        mlRes.data.model,
         model_label:  mlRes.data.model_label,
         scan_warning: mlRes.data.scan_warning || null,
+        modality: mlRes.data.modality || "chest-xray",
+        ...(model_name === DETECTOR_ID ? { localization: validateLocalization(mlRes.data.localization, mlRes.data.findings) } : {}),
         analyzedAt:   new Date(),
       };
     }
 
     media.analysis = analysis;
+    // A new result needs a fresh record/review decision.
+    media.recordedAt = null;
+    media.reviewRequestedAt = null;
     await media.save();
 
     res.json(analysis);
   } catch (err) {
     next(err);
   }
+});
+
+function isRecordPatient(value) {
+  return typeof value === "string" && !!value.trim() && value.trim().length <= 128 && value.trim() !== "imaging-session";
+}
+
+async function analyzedMedia(fileId) {
+  if (!isValidId(fileId)) throw Object.assign(new Error("Invalid file ID"), { status: 400 });
+  const media = await PatientMedia.findOne({ gridfs_id: fileId.toLowerCase() });
+  if (!media) throw Object.assign(new Error("File not found"), { status: 404 });
+  if (media.file_type !== "image" || !media.analysis?.model || !Array.isArray(media.analysis.findings)) {
+    throw Object.assign(new Error("Run image analysis before adding or flagging this result."), { status: 409 });
+  }
+  return media;
+}
+
+// Save a deliberate clinician record/review decision separately from the upload.
+router.post("/record/:fileId", requireAuth, async (req, res, next) => {
+  try {
+    const media = await analyzedMedia(req.params.fileId);
+    if (!isRecordPatient(req.body.patient_id)) return res.status(400).json({ error: "Enter a Patient ID to add this result to a record." });
+    const patientId = req.body.patient_id.trim();
+    const changedPatient = media.patient_id !== patientId;
+    media.recordedAt = changedPatient || !media.recordedAt ? new Date() : media.recordedAt;
+    if (changedPatient) media.reviewRequestedAt = null;
+    media.patient_id = patientId;
+    await media.save();
+    res.json(media);
+  } catch (error) { next(error); }
+});
+
+router.post("/review/:fileId", requireAuth, async (req, res, next) => {
+  try {
+    const media = await analyzedMedia(req.params.fileId);
+    if (!isRecordPatient(media.patient_id)) return res.status(400).json({ error: "Add this result to a patient record before flagging it for review." });
+    media.reviewRequestedAt ||= new Date();
+    await media.save();
+    res.json(media);
+  } catch (error) { next(error); }
 });
 
 // POST /api/media/explain/:fileId  — clinical explanation via OmniRoute mediCluster
@@ -415,7 +500,8 @@ For the given condition, respond with:
   }
 
   // 2. Ollama (secondary fallback)
-  const prompt = `A chest X-ray / medical scan analysis detected the following findings: ${findingsList}.
+  const scanType = model_name === brainMri.MODEL_ID ? "brain MRI" : "chest X-ray";
+  const prompt = `A ${scanType} model returned the following class scores: ${findingsList}.
 
 In plain English (2–3 short paragraphs), explain:
 1. What these conditions mean and how they may be related
@@ -465,7 +551,7 @@ Be clear, concise, and avoid unnecessary medical jargon. Do not provide a specif
 
   // Heuristic clinical explanation fallback
   const fallbackExplanation = `### Findings Analysis Summary\n\nThe medical scan analysis has identified: ${findingsList}.\n\n` +
-    `**Clinical Overview**: These conditions warrant close monitoring. For instance, pulmonary and vascular changes are frequently correlated with systemic cardiovascular or respiratory stress. It is crucial to have these findings interpreted directly by a radiologist or physician in conjunction with the patient's full medical history.\n\n` +
+    `**Clinical Overview**: Model scores are not confirmed diagnoses. A radiologist or physician must interpret the scan alongside the patient's history and examination.\n\n` +
     `**Standard Care Guidelines**: General medical response incorporates lifestyle modifications, routine physical assessments, and therapeutic interventions tailored to the specific grade of the findings.\n\n` +
     `*⚠️ Educational information only. Clinical correlation by a qualified specialist is required.*`;
   return res.json({ explanation: fallbackExplanation });
@@ -698,11 +784,22 @@ router.post("/gradcam/:fileId", async (req, res, next) => {
     const media = await PatientMedia.findOne({ gridfs_id: req.params.fileId.toLowerCase() });
     if (!media) return res.status(404).json({ error: "File not found" });
 
-    const imageB64 = (await mediaStorage.readObject(media)).toString("base64");
     const { model_name = "densenet121-res224-chex", target_label } = req.body;
+    if (model_name === brainMri.MODEL_ID) {
+      const analysis = media.analysis;
+      if (analysis?.model !== brainMri.MODEL_ID) {
+        return res.status(400).json({ error: "Run Brain MRI analysis before requesting its heatmap." });
+      }
+      return res.json({
+        heatmap_data_url: analysis.heatmap_data_url || null,
+        gradcam_available: !!analysis.gradcam_available,
+        target_label: analysis.prediction_label,
+      });
+    }
+    const imageB64 = (await mediaStorage.readObject(media)).toString("base64");
 
     const r = await axios.post(
-      `${ML_ENGINE_URL}/gradcam`,
+      `${IMAGING_ENGINE_URL}/gradcam`,
       { image_b64: imageB64, model_name, target_label, filename: media.original_name },
       { timeout: 60_000 }
     );

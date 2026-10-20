@@ -93,7 +93,8 @@ async function imagingAlerts(now) {
   ).lean();
   return media.flatMap((m) => {
     const top = [...(m.analysis?.findings || [])].sort((a, b) => b.confidence - a.confidence)[0];
-    if (!top || top.confidence < FINDING_THRESHOLD) return [];
+    if (!top || top.confidence < FINDING_THRESHOLD ||
+        m.analysis?.modality === "brain-mri" && (m.analysis.is_tumor === false || top.label === "No Tumor")) return [];
     return [{
       id: `img:${m._id}:${top.label}`,
       at: m.analysis.analyzedAt,

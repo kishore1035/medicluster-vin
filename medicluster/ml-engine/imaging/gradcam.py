@@ -154,7 +154,7 @@ def generate_gradcam(
         # Forward pass
         tensor.requires_grad_(True)
         output = model(tensor)
-        confidence = float(torch.sigmoid(output[0, label_idx]).item())
+        confidence = float(output[0, label_idx].item())
 
         # Backward on target class
         model.zero_grad()

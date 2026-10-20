@@ -52,3 +52,43 @@ def test_attach_clinical_info_sorted_descending():
     ]
     result = _attach_clinical_info(findings, threshold=0.15)
     assert result[0]["confidence"] > result[1]["confidence"]
+
+
+def test_pretrained_scores_are_not_sigmoided_twice(monkeypatch):
+    import torch
+    import imaging.analyzer as analyzer
+    class Model(torch.nn.Module):
+        pathologies=['Atelectasis','Pneumonia']
+        def forward(self, value): return torch.tensor([[.08,.81]])
+    monkeypatch.setattr(analyzer,'_get_model',lambda name:Model())
+    monkeypatch.setattr(analyzer,'_load_pixels',lambda data,name:(np.ones((256,256),dtype=np.float32),False))
+    monkeypatch.setattr(analyzer,'_preprocess',lambda *args:torch.zeros(1,1,224,224))
+    result=analyzer.analyze_image(b'pixels')
+    assert result['findings']==[dict(label='Pneumonia',confidence=.81,**{
+        key:value for key,value in analyzer.get_clinical_info('Pneumonia').items()
+        if key in ('cause','medications','prevention','severity')
+    })]
+
+
+def dicom_bytes(photometric='MONOCHROME2',frames=1):
+    import io
+    import pydicom
+    from pydicom.dataset import FileDataset, FileMetaDataset
+    from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
+    meta=FileMetaDataset();meta.TransferSyntaxUID=ExplicitVRLittleEndian;meta.MediaStorageSOPClassUID=SecondaryCaptureImageStorage;meta.MediaStorageSOPInstanceUID=generate_uid()
+    ds=FileDataset('',{},file_meta=meta,preamble=b'\0'*128)
+    ds.Rows=128;ds.Columns=128;ds.SamplesPerPixel=1;ds.PhotometricInterpretation=photometric;ds.Modality='CR'
+    ds.BitsAllocated=16;ds.BitsStored=12;ds.HighBit=11;ds.PixelRepresentation=0
+    if frames>1:ds.NumberOfFrames=frames
+    ds.PixelData=(np.arange(128*128*frames,dtype=np.uint16)%4096).tobytes()
+    output=io.BytesIO();pydicom.dcmwrite(output,ds,enforce_file_format=True);return output.getvalue()
+
+
+def test_12bit_chest_dicom_normalizes_before_xrv_preprocessing():
+    from imaging.analyzer import _load_pixels,_preprocess
+    array,is_dicom=_load_pixels(dicom_bytes(),'xray.dcm')
+    assert is_dicom and array.min()==0 and array.max()==255
+    assert _preprocess(array,224,is_dicom).shape==(1,1,224,224)
+    inverted,_=_load_pixels(dicom_bytes('MONOCHROME1'),'xray.dcm')
+    assert inverted[0,0]>inverted[0,1]
+    with pytest.raises(ValueError,match='single-frame'):_load_pixels(dicom_bytes(frames=2),'xray.dcm')

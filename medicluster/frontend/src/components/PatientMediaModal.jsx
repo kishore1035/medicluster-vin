@@ -6,6 +6,7 @@ import {
   listPatientMedia,
   uploadPatientMedia,
 } from "../api/apiClient";
+import { hasImagingAnalysis, imagingSummary } from "../utils/imagingModels";
 
 const ACCEPT = "image/jpeg,image/png,image/gif,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain";
 
@@ -25,32 +26,35 @@ function FileIcon() {
   );
 }
 
-function FindingsPanel({ findings, model }) {
+function FindingsPanel({ analysis }) {
+  const { findings = [], model } = analysis;
+  const { isBrain } = imagingSummary(analysis);
   const TOP = 8;
   const top = findings.slice(0, TOP);
   return (
     <div className="mt-2 bg-slate-50 border border-line rounded-[3px] p-3 space-y-2">
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-        AI Findings · <span className="font-mono normal-case">{model}</span>
+        {isBrain ? "Brain MRI class scores" : "AI Findings"} · <span className="font-mono normal-case">{model}</span>
       </p>
       {top.map((f) => (
         <div key={f.label} className="space-y-0.5">
           <div className="flex justify-between text-xs">
-            <span className={`font-medium ${f.confidence > 0.5 ? "text-red-600" : "text-slate-600"}`}>
+            <span className={`font-medium ${!isBrain && f.confidence > 0.5 ? "text-red-600" : "text-slate-600"}`}>
               {f.label}
             </span>
             <span className="text-slate-400 font-mono">{(f.confidence * 100).toFixed(1)}%</span>
           </div>
           <div className="w-full bg-slate-200 rounded-full h-1.5">
             <div
-              className={`h-1.5 rounded-full ${f.confidence > 0.5 ? "bg-red-700" : "bg-blue-400"}`}
+              className={`h-1.5 rounded-full ${isBrain ? "bg-ink" : f.confidence > 0.5 ? "bg-red-700" : "bg-blue-400"}`}
               style={{ width: `${(f.confidence * 100).toFixed(1)}%` }}
             />
           </div>
         </div>
       ))}
       <p className="text-xs text-slate-400 pt-1">
-        Confidence &gt;50% highlighted in red. For clinical reference only — not a diagnosis.
+        {isBrain ? "Four-class research model output. Clinician review required."
+          : "Confidence >50% highlighted in red. For clinical reference only — not a diagnosis."}
       </p>
     </div>
   );
@@ -107,7 +111,7 @@ export default function PatientMediaModal({ patientId, onClose }) {
     setAnalyzing((prev) => new Set(prev).add(file.gridfs_id));
     setError(null);
     try {
-      const analysis = await analyzePatientMedia(file.gridfs_id);
+      const analysis = await analyzePatientMedia(file.gridfs_id, imagingSummary(file.analysis).model);
       const updated = { ...file, analysis };
       setFiles((prev) => prev.map((f) => f.gridfs_id === file.gridfs_id ? updated : f));
       setSelectedFile(updated);
@@ -256,13 +260,13 @@ export default function PatientMediaModal({ patientId, onClose }) {
                         >
                           {isAnalyzing ? (
                             <><div className="spinner w-3 h-3" /> Analyzing…</>
-                          ) : f.analysis ? "Re-analyze" : "Analyze"}
+                          ) : hasImagingAnalysis(f.analysis) ? "Re-analyze" : "Analyze"}
                         </button>
                       )}
                     </div>
 
                     {/* Analysis badge */}
-                    {f.analysis && (
+                    {hasImagingAnalysis(f.analysis) && (
                       <div className="absolute top-1 right-1 bg-risk-low text-paper text-xs rounded px-1 py-0.5 font-medium">
                         AI ✓
                       </div>
@@ -274,11 +278,8 @@ export default function PatientMediaModal({ patientId, onClose }) {
           )}
 
           {/* Findings panel for selected file */}
-          {selectedFile?.analysis && (
-            <FindingsPanel
-              findings={selectedFile.analysis.findings}
-              model={selectedFile.analysis.model}
-            />
+          {hasImagingAnalysis(selectedFile?.analysis) && (
+            <FindingsPanel analysis={selectedFile.analysis} />
           )}
         </div>
       </div>

@@ -1,4 +1,4 @@
-"""imaging/analyzer.py — Multi-model chest X-ray / CT scan / DICOM analysis."""
+"""Multi-model chest radiograph and single-frame DICOM analysis."""
 
 import io
 import numpy as np
@@ -7,13 +7,6 @@ import torchxrayvision as xrv
 from PIL import Image
 
 from clinical_knowledge import get_clinical_info
-
-# PyTorch 2.6+ changed weights_only default to True which blocks torchxrayvision.
-_orig_load = torch.load
-def _patched_load(*args, **kwargs):
-    kwargs.setdefault("weights_only", False)
-    return _orig_load(*args, **kwargs)
-torch.load = _patched_load
 
 # ── Model registry ────────────────────────────────────────────────────────────
 
@@ -108,22 +101,34 @@ def _get_model(model_name: str):
 
 # ── Preprocessing ─────────────────────────────────────────────────────────────
 
-def _load_pixels(image_bytes: bytes, filename: str = "") -> tuple[np.ndarray, bool]:
+def _load_pixels(image_bytes: bytes, filename: str = "", radiograph_only: bool = True) -> tuple[np.ndarray, bool]:
     """
     Returns (arr, is_dicom).
     - Regular images: float32 [0, 255] grayscale.
-    - DICOM: float32 Hounsfield units (may be negative).
+    - DICOM: float32 display intensities [0,255], respecting VOI and polarity.
     """
     ext = filename.lower()
     if ext.endswith(".dcm") or ext.endswith(".dicom"):
         import pydicom
         ds = pydicom.dcmread(io.BytesIO(image_bytes))
-        arr = ds.pixel_array.astype(np.float32)
-        slope    = float(getattr(ds, "RescaleSlope",     1.0))
-        intercept = float(getattr(ds, "RescaleIntercept", 0.0))
-        return arr * slope + intercept, True
+        from pydicom.pixels import apply_modality_lut, apply_voi_lut
+        if int(getattr(ds,'Rows',0))*int(getattr(ds,'Columns',0))>40_000_000:raise ValueError('Image exceeds 40 million pixels')
+        if int(getattr(ds, 'NumberOfFrames', 1)) != 1 or int(getattr(ds, 'SamplesPerPixel', 1)) != 1:
+            raise ValueError('Expected a single-frame monochrome chest radiograph')
+        if radiograph_only and str(getattr(ds, 'Modality', '')).upper() in ('MR', 'CT'):
+            raise ValueError('Expected chest radiograph DICOM, not MRI or CT')
+        arr = np.asarray(apply_voi_lut(apply_modality_lut(ds.pixel_array, ds), ds), dtype=np.float32)
+        if arr.ndim != 2 or not np.isfinite(arr).all():
+            raise ValueError('Expected a finite single-frame chest radiograph')
+        low, high = float(arr.min()), float(arr.max())
+        arr = (arr-low) * (255.0/(high-low)) if high > low else np.zeros_like(arr)
+        if str(getattr(ds, 'PhotometricInterpretation', '')).upper() == 'MONOCHROME1':
+            arr = 255.0-arr
+        return np.clip(arr, 0, 255), True
 
-    img = Image.open(io.BytesIO(image_bytes)).convert("L")
+    img = Image.open(io.BytesIO(image_bytes))
+    if img.width*img.height>40_000_000:raise ValueError("Image exceeds 40 million pixels")
+    img = img.convert("L")
     return np.array(img, dtype=np.float32), False
 
 
@@ -188,7 +193,8 @@ def analyze_image(
     with torch.no_grad():
         output = model(tensor)
 
-    probs = torch.sigmoid(output).squeeze().cpu().numpy()
+    # Pretrained TorchXRayVision models already apply sigmoid and operating-point normalization.
+    probs = output.squeeze(0).cpu().numpy()
 
     raw_findings = [
         {"label": label, "confidence": round(float(prob), 4)}

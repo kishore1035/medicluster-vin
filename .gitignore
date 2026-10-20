@@ -43,3 +43,10 @@ env/
 .gradle/
 local.properties
 medicluster/frontend/public/downloads/medicluster-sms-sender.apk
+
+# Local intelligence models and owned patient artifacts
+medicluster/intelligence-engine/.models/
+medicluster/intelligence-engine/.runtime/
+medicluster/ml-engine/.venv-imaging/
+medicluster/ml-engine/.models/
+medicluster/ml-engine/.runtime/

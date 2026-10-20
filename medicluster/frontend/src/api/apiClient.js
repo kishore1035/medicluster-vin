@@ -213,6 +213,16 @@ export async function analyzePatientMedia(fileId, modelName = "densenet121-res22
   return res.data;
 }
 
+export async function addImagingToRecord(fileId, patientId) {
+  const res = await api.post(`/media/record/${fileId}`, { patient_id: patientId });
+  return res.data;
+}
+
+export async function flagImagingForReview(fileId) {
+  const res = await api.post(`/media/review/${fileId}`);
+  return res.data;
+}
+
 /**
  * Request an AI plain-English explanation for a set of findings.
  * Returns { explanation: string | null, error?: string }

@@ -54,6 +54,7 @@ app.use("/api/sms-gateway", require('./routes/smsGatewayRoutes'));
 app.use("/api/data",    requireAuth, dataRoutes);
 app.use("/api/cluster", requireAuth, clusterRoutes);
 app.use("/api/alerts",  requireAuth, alertRoutes);
+app.use("/api/intelligence", require("./routes/intelligenceRoutes"));
 app.use("/api/media", mediaRoutes);
 app.use("/api/reminders", reminderRoutes);
 app.use("/api/dispatch", dispatchRoutes);
