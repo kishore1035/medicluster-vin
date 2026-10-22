@@ -1,0 +1,11 @@
+{
+  "provider": "Unsplash",
+  "license": "https://unsplash.com/license",
+  "note": "Decorative medical photography; these images do not depict MediCluster staff or facilities.",
+  "photos": [
+    { "file": "medical-clinical.jpg", "source": "https://images.unsplash.com/photo-1551190822-a9333d879b1f", "description": "Surgical team" },
+    { "file": "medical-everyday.jpg", "source": "https://images.unsplash.com/photo-1505751172876-fa1923c5c528", "description": "Stethoscope on fabric" },
+    { "file": "medical-response.jpg", "source": "https://images.unsplash.com/photo-1516549655169-df83a0774514", "description": "Hospital operating room" },
+    { "file": "medical-team.jpg", "source": "https://images.unsplash.com/photo-1579684385127-1ef15d508118", "description": "Medical team beneath an operating light" }
+  ]
+}

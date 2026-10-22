@@ -1,0 +1,51 @@
+@font-face { font-family: "MediCluster Workspace"; src: url("/fonts/workspace-regular.woff2") format("woff2"); font-style: normal; font-weight: 400; font-display: swap; }
+.mc-workspaces { padding-block: 100px 110px; background: #f0f1fa; font-family: "MediCluster Workspace",var(--mc-sans); scroll-margin-top: 100px; }
+.mc-workspaces > .mc-container { width: 90%; }
+.mc-workspaces-heading { display: grid; grid-template-columns: 1.3fr 1fr; gap: 70px; align-items: end; margin-bottom: 55px; }
+.mc-workspaces-heading .mc-section-label { color: #626b5a; margin-bottom: 22px; }
+.mc-workspaces-heading h2 { font-size: clamp(35px,4.2vw,65px); line-height: 1.08; max-width: 650px; margin: 0; }
+.mc-workspaces-heading > p { justify-self: end; color: #626b5a; font-size: 17px; line-height: 1.65; margin: 0 0 3px; }
+.mc-workspace-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); column-gap: 2vw; row-gap: 80px; align-items: start; }
+.mc-workspace-item { min-width: 0; }
+.download-portal .mc-workspace-card { display: block; color: #000; outline-offset: 8px; }
+.mc-workspace-media { position: relative; width: 100%; aspect-ratio: 1 / .65; border-radius: 15px; overflow: hidden; isolation: isolate; background: #dce3d5; }
+.mc-workspace-image { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.035); transition: transform 850ms cubic-bezier(.16,1,.3,1); }
+.mc-workspace-depth { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
+.mc-workspace-card[data-depth-state="ready"] .mc-workspace-depth { opacity: 1; }
+.mc-workspace-caption { padding-top: 1.35vw; }
+.mc-workspace-caption .mc-workspace-meta { font-size: .9vw; color: #000; letter-spacing: 0; line-height: 1.15; margin: 0 0 .9vw; }
+.download-portal .mc-workspace-caption h3 { position: relative; display: block; overflow: hidden; margin: 0; font-weight: 400; font-size: 3vw; letter-spacing: 0; line-height: 1.15; left: -.06em; }
+.mc-workspace-title-arrow { position: absolute; top: .12em; left: 0; width: .8em; height: .8em; transform: translateX(-1.2em); transition: transform 650ms cubic-bezier(.16,1,.3,1); stroke-width: 1.6; }
+.mc-workspace-title-mask { display: block; white-space: nowrap; transform: translateX(0); transition: transform 650ms cubic-bezier(.16,1,.3,1); }
+.mc-workspace-unavailable { color: #738069; font-size: 12px; margin-top: 12px; }
+#workspace-showcase-title { scroll-margin-top: 120px; }
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .mc-workspace-card:is(:hover,:focus-visible) .mc-workspace-image { transform: scale(1.08); }
+}
+.mc-workspace-card:is(:hover,:focus-visible) .mc-workspace-title-arrow { transform: translateX(0); }
+.mc-workspace-card:is(:hover,:focus-visible) .mc-workspace-title-mask { transform: translateX(1.5em); }
+.mc-workspace-card:focus-visible { outline: 2px solid #79886a; border-radius: 15px; }
+@media (min-aspect-ratio:21/9) {
+  .mc-workspace-grid { row-gap: 160px; }
+  .mc-workspace-caption .mc-workspace-meta { font-size: .6vw; }
+  .download-portal .mc-workspace-caption h3 { font-size: 2vw; }
+}
+@media (max-width:812px) {
+  .mc-workspaces { padding-block: 65px; }
+  .mc-workspaces-heading { grid-template-columns: 1fr; gap: 22px; margin-bottom: 32px; }
+  .mc-workspaces-heading > p { justify-self: start; font-size: 15px; }
+  .mc-workspace-grid { grid-template-columns: 1fr; gap: 32px; }
+  .mc-workspace-media { border-radius: 15px; }
+  .mc-workspace-caption { padding-top: 3.75vw; }
+  .mc-workspace-caption .mc-workspace-meta { font-size: 2.5vw; margin-bottom: 2.5vw; }
+  .download-portal .mc-workspace-caption h3 { font-size: 6.5vw; }
+  .mc-workspace-title-arrow { transform: none; transition: none; }
+  .mc-workspace-title-mask,.mc-workspace-card:is(:hover,:focus-visible) .mc-workspace-title-mask { transform: translateX(1.25em); transition: none; }
+}
+@media (max-width:812px), (pointer:coarse), (prefers-reduced-motion:reduce) {
+  .mc-workspace-image { transform: none !important; transition: none; }
+  .mc-workspace-depth { display: none; }
+}
+@media (prefers-reduced-motion:reduce) { .mc-workspace-title-mask,.mc-workspace-title-arrow { transition: none; } }
+.download-portal[data-motion-paused="true"] .mc-workspace-image { transform: none !important; transition: none; }
+.download-portal[data-motion-paused="true"] :is(.mc-workspace-title-mask,.mc-workspace-title-arrow,.mc-workspace-depth) { transition: none; }

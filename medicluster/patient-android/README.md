@@ -81,7 +81,9 @@ APK. Release version defaults to 1.0.0/code 1 locally; CI assigns increasing run
 After website deployment, `/app` offers **Download Android app** on the patient login
 screen. Share `/download` for installation. Legacy `/downloads/medicluster-patient.apk`
 links redirect there, including URLs with checksum query parameters. The download
-button fetches `POST /api/patient-installer`, checks size and SHA-256, then saves
-one APK without navigating away. HTML wake-up pages never become APK downloads.
+button fetches `GET /downloads/medicluster-patient.apk` with
+`X-MediCluster-Installer: 1`, checks size and SHA-256, then saves one APK without
+navigating away. APKs ship with the frontend, so separate frontend deployments
+do not need backend access to the installer files. HTML wake-up pages never become APK downloads.
 Release metadata and SHA-256 are in `/downloads/patient-app.json`. Android may ask the user to
 allow installation from their browser. This is direct distribution, not a Play Store listing.

@@ -38,6 +38,8 @@ env/
 
 # Browser test artifacts
 .playwright-mcp/
+medicluster/frontend/test-results/
+medicluster/frontend/playwright-report/
 
 # Local Android tooling and sender installer
 .gradle/

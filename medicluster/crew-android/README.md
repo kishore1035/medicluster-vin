@@ -42,6 +42,8 @@ and publishes the APK plus `crew-app.json` to the MediCluster website source.
 Native changes trigger that workflow; web updates arrive through the deployed
 crew website. Preserve the publisher key for future APK updates.
 
-Downloads use an explicit `POST /api/crew-installer` and verify release byte size
-and SHA-256 before saving `MediCluster-Crew.apk`. Legacy direct APK navigations
-redirect to `/download#crew`, avoiding repeated downloads during server cold starts.
+Downloads fetch the frontend asset `GET /downloads/medicluster-crew.apk` with
+`X-MediCluster-Installer: 1` and verify release byte size and SHA-256 before saving
+`MediCluster-Crew.apk`. This also works when frontend and backend deploy separately.
+On the combined server, legacy direct APK navigations redirect to `/download#crew`,
+avoiding repeated downloads during server cold starts.

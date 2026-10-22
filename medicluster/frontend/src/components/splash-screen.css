@@ -52,20 +52,12 @@
 }
 @keyframes mc-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-.mc-splash-skip {
-  position: absolute; left: 50%; bottom: clamp(14px, 3.5vh, 36px); transform: translateX(-50%);
-  font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 12px; color: #ecebe6; opacity: 0; white-space: nowrap;
-  border: 0; background: transparent; min-height: 44px; padding: 8px 12px; cursor: pointer;
-  animation: mc-skip 400ms ease 600ms both;
-}
-.mc-splash-skip:focus-visible { outline: 2px solid #ecebe6; outline-offset: 2px; }
-@keyframes mc-skip { to { opacity: .4; } }
-
 /* Reduced motion: show the finished logo. */
-.mc-splash[data-reduced="true"] :is(.mc-splash-mark, .mc-splash-word, .mc-splash-line, .mc-splash-fill, .mc-splash-letters > span, .mc-splash-tagline, .mc-splash-skip) { animation: none; }
+.mc-splash[data-reduced="true"] :is(.mc-splash-mark, .mc-splash-word, .mc-splash-line, .mc-splash-fill, .mc-splash-letters > span, .mc-splash-tagline) { animation: none; }
 .mc-splash[data-reduced="true"] .mc-splash-mark { scale: 1; }
 .mc-splash[data-reduced="true"] .mc-splash-word { grid-template-columns: 1fr; }
 .mc-splash[data-reduced="true"] .mc-splash-fill { opacity: 1; }
 .mc-splash[data-reduced="true"] .mc-splash-line { opacity: 0; }
-.mc-splash[data-reduced="true"] .mc-splash-skip { opacity: .4; }
 .mc-splash[data-reduced="true"] { transition: none; }
+
+.mc-splash:focus { outline: none; }

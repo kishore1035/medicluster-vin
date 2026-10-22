@@ -10,8 +10,8 @@ function saveAndroidBlob(blob, filename) {
 }
 
 const INSTALLERS = {
-  patient: { endpoint: '/api/patient-installer', filename: 'MediCluster-Patient.apk' },
-  crew: { endpoint: '/api/crew-installer', filename: 'MediCluster-Crew.apk' },
+  patient: { endpoint: '/downloads/medicluster-patient.apk', filename: 'MediCluster-Patient.apk' },
+  crew: { endpoint: '/downloads/medicluster-crew.apk', filename: 'MediCluster-Crew.apk' },
 };
 
 export function createAndroidDownloader(appId, { fetchImpl = globalThis.fetch, saveBlob = saveAndroidBlob } = {}) {
@@ -23,7 +23,10 @@ export function createAndroidDownloader(appId, { fetchImpl = globalThis.fetch, s
     pending = true;
     try {
       const response = await fetchImpl(installer.endpoint, {
-        method: 'POST', cache: 'no-store', redirect: 'error',
+        // APKs ship with the frontend, including on static hosts. This header
+        // lets the combined server distinguish fetches from legacy navigations.
+        method: 'GET', headers: { 'X-MediCluster-Installer': '1' },
+        cache: 'no-store', redirect: 'error',
         signal: AbortSignal.timeout(120_000),
       });
       if (!response.ok || !response.headers.get('content-type')?.includes('application/vnd.android.package-archive')) {

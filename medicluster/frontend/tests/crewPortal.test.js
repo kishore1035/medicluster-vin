@@ -6,13 +6,15 @@ import { createServer } from 'vite';
 import { createServer as createHttpServer } from 'node:http';
 import { buildAppCatalog } from '../src/data/appCatalog.js';
 
-let server, Selector, FAQ;
+let server, Selector, FAQ, DispatchSpotlight;
 const patient = { versionName: '9.8.7', sizeBytes: 12345, sha256: 'a'.repeat(64) };
 const crew = { versionName: '1.0.0', sizeBytes: 23456, sha256: 'b'.repeat(64) };
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, hmr: { server: createHttpServer() } }, appType: 'custom' });
   Selector = (await server.ssrLoadModule('/src/components/download/ApplicationSelector.tsx')).default;
-  FAQ = (await server.ssrLoadModule('/src/components/download/LandingSections.tsx')).LandingFAQ;
+  const sections = await server.ssrLoadModule('/src/components/download/LandingSections.tsx');
+  FAQ = sections.LandingFAQ;
+  DispatchSpotlight = sections.DispatchSpotlight;
 });
 after(async () => { await server?.close(); });
 
@@ -47,4 +49,24 @@ test('installation guide covers both APKs and returns to selected Crew app with 
   assert.match(html, /href="#crew"/);
   assert.match(html, /Crew app · Version 1.0.0/);
   assert.doesNotMatch(html, /9\.8\.7/);
+});
+
+test('landing page explains dispatch and crew with direct web destinations and Crew download access', () => {
+  assert.equal(typeof DispatchSpotlight, 'function');
+  const html = renderToStaticMarkup(React.createElement(DispatchSpotlight, {
+    apps: buildAppCatalog('https://dispatch.example.com'),
+  }));
+  assert.match(html, /<h3>Dispatch dashboard<\/h3>/);
+  assert.match(html, /<h3[^>]*>Dispatch crew app<\/h3>/);
+  assert.match(html, /href="https:\/\/dispatch.example.com\/#\/login"/);
+  assert.match(html, /href="https:\/\/dispatch.example.com\/#\/driver\/login"/);
+  assert.match(html, /href="#crew"/);
+  assert.match(html, /Employee ID and PIN/);
+});
+
+test('unconfigured dispatch never renders dead web links while Crew download stays discoverable', () => {
+  assert.equal(typeof DispatchSpotlight, 'function');
+  const html = renderToStaticMarkup(React.createElement(DispatchSpotlight, { apps: buildAppCatalog('') }));
+  assert.doesNotMatch(html, /href="(?:null|undefined|.*#\/login|.*#\/driver\/login)"/);
+  assert.match(html, /href="#crew"/);
 });

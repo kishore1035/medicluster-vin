@@ -12,13 +12,14 @@ import {
 } from "lucide-react";
 import Logo from "../components/Logo";
 import ApplicationSelector from "../components/download/ApplicationSelector";
+import WorkspaceShowcase from "../components/download/WorkspaceShowcase";
 import CareArtifact from "../components/download/CareArtifact";
 import {
   CareStory,
   PatientSpotlight,
   ClinicalSpotlight,
+  DispatchSpotlight,
   CareJourney,
-  GetStarted,
   LandingFAQ,
   LandingFooter,
 } from "../components/download/LandingSections";
@@ -266,37 +267,7 @@ export default function DownloadPage() {
             <a href="#crew">Crews</a>
           </nav>
         </section>
-        <CareStory />
-        <section
-          className="mc-cinematic"
-          id="care-in-motion"
-          aria-labelledby="cinematic-title"
-        >
-          <div className="mc-cinematic-stage">
-            <div className="mc-cinematic-frame">
-              <img
-                src="/images/care-corridor.webp"
-                alt="A healthcare professional walking through a sunlit clinic"
-                loading="lazy"
-              />
-              <div className="mc-cinematic-shade" />
-            </div>
-            <div className="mc-cinematic-copy">
-              <p>From the clinic to the everyday.</p>
-              <h2 id="cinematic-title">
-                Care doesn't stop
-                <br />
-                at the <em>clinic door.</em>
-              </h2>
-            </div>
-            <div className="mc-cinematic-caption">
-              <span>Made for the people behind the care.</span>
-              <a href="#apps">
-                Find your workspace <ArrowDown size={17} aria-hidden="true" />
-              </a>
-            </div>
-          </div>
-        </section>
+        <CareStory paused={motionPaused} />
         <section
           className="download-apps"
           id="apps"
@@ -316,10 +287,11 @@ export default function DownloadPage() {
             />
           </div>
         </section>
+        <WorkspaceShowcase apps={APPS} paused={motionPaused} />
         <PatientSpotlight />
         <ClinicalSpotlight />
+        <DispatchSpotlight apps={APPS} />
         <CareJourney />
-        <GetStarted paused={motionPaused} />
         <LandingFAQ
           release={release}
           crewRelease={crewRelease}
@@ -328,7 +300,7 @@ export default function DownloadPage() {
           setInstallOpen={setInstallOpen}
         />
       </main>
-      <LandingFooter onInstall={() => showInstall()} />
+      <LandingFooter apps={APPS} onInstall={() => showInstall()} />
     </div>
   );
 }

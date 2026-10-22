@@ -34,11 +34,11 @@ export default function SplashScreen({ onDone, tagline = "Patient risk stratific
   const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const [landed, setLanded] = useState(reduced);
   const [leaving, setLeaving] = useState(false);
-  const skipButton = useRef(null);
+  const splashRef = useRef(null);
 
   useEffect(() => {
     const previousFocus = document.activeElement;
-    skipButton.current?.focus({ preventScroll: true });
+    splashRef.current?.focus({ preventScroll: true });
     return () => {
       if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
     };
@@ -63,7 +63,7 @@ export default function SplashScreen({ onDone, tagline = "Patient risk stratific
       }
       if (e.key === "Tab") {
         e.preventDefault();
-        skipButton.current?.focus();
+        splashRef.current?.focus();
       }
     };
     window.addEventListener("keydown", skip);
@@ -71,7 +71,7 @@ export default function SplashScreen({ onDone, tagline = "Patient risk stratific
   }, []);
 
   return (
-    <div className="mc-splash" data-leaving={leaving} data-reduced={reduced} onClick={() => setLeaving(true)}
+    <div ref={splashRef} tabIndex={-1} className="mc-splash" data-leaving={leaving} data-reduced={reduced} onClick={() => setLeaving(true)}
       role="dialog" aria-modal="true" aria-label="Starting MediCluster">
       <div className="mc-splash-lockup" role="img" aria-label="MediCluster">
         <svg className="mc-splash-mark" viewBox="0 0 18 18" aria-hidden="true">
@@ -97,9 +97,6 @@ export default function SplashScreen({ onDone, tagline = "Patient risk stratific
           </div>
         </div>
       </div>
-      <button ref={skipButton} type="button" className="mc-splash-skip" aria-label="Skip intro" onClick={() => setLeaving(true)}>
-        Tap or press Esc to skip
-      </button>
     </div>
   );
 }

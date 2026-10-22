@@ -238,3 +238,35 @@ Probabilistic soft-assignment clustering using the Expectation-Maximisation algo
 
 **CtrlAltElite** · M S Engineering College  
 Hackathon 2024
+
+### Landing page browser checks
+
+From `frontend`, run `npm test` and `npm run build` for component checks and the
+production build. Run `npx playwright install chromium` once, then
+`npm run test:browser` to check the animated logo splash, keyboard/pointer skipping,
+workspace card links, hover, platform preview playback, mobile layout and reduced
+motion. Playwright starts Vite when no local frontend is running.
+
+For an existing system Chrome installation, set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/google-chrome-stable` instead of installing
+another browser. Failure screenshots and traces stay in ignored `test-results/`.
+The workspace card photographs are served locally from
+`public/images/medical-*.jpg`. Source URLs and the Unsplash license link are recorded
+in `public/images/medical-photo-sources.json`. They are decorative medical imagery.
+The care reel expands and curves with scroll and pointer movement. Clicking Play
+opens the credited Cleveland Clinic campus tour in a YouTube privacy-enhanced
+embed. Closing it, leaving the section, or pausing site motion stops playback.
+Reduced motion keeps the reel flat. The poster and video sources are recorded in
+`public/images/medical-reel-source.json`. Browser tests stub the external player
+while checking playback controls, embed configuration and scroll geometry.
+Editorial accents use the locally hosted Newsreader medium italic font; its OFL
+license is included in `public/fonts/Newsreader-OFL.txt`.
+
+Workspace card layout and interaction reference: the user-provided local
+`/home/vinay/lusion-clone/lusion-clone` site. The card section uses its supplied
+Aeonik Regular font (`public/fonts/workspace-source.json`), 65% image height,
+15px corners, responsive columns and arrow entry. Titles remain plain text.
+Medical imagery stays local. A small WebGL layer adds pointer focus and
+procedural foreground/background parallax; it does not claim measured scene depth.
+Rendering stops when idle or offscreen. Touch, reduced motion, site motion pause,
+and unavailable/lost WebGL contexts keep the original photograph usable.

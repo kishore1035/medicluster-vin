@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ArrowUpRight,
   Check,
@@ -10,8 +10,7 @@ import {
   Plus,
 } from "lucide-react";
 import Logo from "../Logo";
-import type { PatientRelease } from "./appTypes";
-import SculptureHero from "@/components/ui/liquid-sculpture-hero";
+import type { PatientRelease, ProductApp } from "./appTypes";
 
 export function TextLink({
   href,
@@ -30,31 +29,7 @@ export function TextLink({
   );
 }
 
-export function CareStory() {
-  return (
-    <section
-      className="mc-story mc-container"
-      id="care-story"
-      aria-labelledby="care-story-title"
-    >
-      <p className="mc-section-label" data-reveal>
-        A more connected way to care
-      </p>
-      <div className="mc-story-copy" data-reveal>
-        <h2 id="care-story-title">
-          The right information.
-          <br />
-          The right people.
-          <br />
-          <span>One shared direction.</span>
-        </h2>
-        <p>
-          From the clinic to the everyday, make the next step easier to see.
-        </p>
-      </div>
-    </section>
-  );
-}
+export { default as CareStory } from "./PlatformReel";
 
 const PATIENT_FEATURES = [
   {
@@ -235,6 +210,8 @@ export function PatientSpotlight() {
 
 export { default as ClinicalSpotlight } from "./ClinicalSpotlight";
 
+export { default as DispatchSpotlight } from "./DispatchSpotlight";
+
 export function CareJourney() {
   return (
     <section
@@ -289,64 +266,6 @@ export function CareJourney() {
             </li>
           ))}
         </ol>
-      </div>
-    </section>
-  );
-}
-
-export function GetStarted({ paused = false }: { paused?: boolean }) {
-  const sectionRef = useRef<HTMLElement>(null);
-  return (
-    <section
-      ref={sectionRef}
-      className="mc-get-started"
-      aria-labelledby="get-started-title"
-    >
-      <div className="mc-cta-liquid">
-        <SculptureHero
-          backgroundOnly
-          eventTargetRef={sectionRef}
-          paused={paused}
-          src="/images/liquid-sculpture.webp"
-          mobileSrc="/images/liquid-sculpture.webp"
-          darkSrc="/images/liquid-sculpture.webp"
-          mobileDarkSrc="/images/liquid-sculpture.webp"
-          background="#e4ebdc"
-          height="100%"
-          sculptureScale={0.95}
-          sculptureFit="contain"
-          mobileSculptureScale={0.5}
-          sculptureY={0}
-          particleDensity={0.4}
-          strength={0.8}
-          radius={200}
-          particleSpread={0.7}
-          turbulence={0.6}
-          liquid={0.8}
-          loadFonts={false}
-          showCredit={false}
-        />
-      </div>
-      <div className="mc-container mc-get-started-layout" data-reveal>
-        <h2 id="get-started-title">
-          Your next step.
-          <br />
-          <em>Closer to care.</em>
-        </h2>
-        <div>
-          <p>Choose your app and get connected, wherever you are.</p>
-          <div className="mc-cta-buttons">
-            <a className="download-pill download-pill-dark" href="#apps">
-              Get the apps <ArrowUpRight size={19} aria-hidden="true" />
-            </a>
-            <a className="download-pill" href="/app">
-              Open patient app <ArrowUpRight size={19} aria-hidden="true" />
-            </a>
-          </div>
-          <span className="mc-platform-note">
-            Android 8.0+ · Web apps for every role
-          </span>
-        </div>
       </div>
     </section>
   );
@@ -443,7 +362,9 @@ export function LandingFAQ({
   );
 }
 
-export function LandingFooter({ onInstall }: { onInstall: () => void }) {
+export function LandingFooter({ onInstall, apps = [] }: { onInstall: () => void; apps?: ProductApp[] }) {
+  const dispatch = apps.find(app => app.id === "dispatch");
+  const crew = apps.find(app => app.id === "crew");
   return (
     <footer className="mc-footer">
       <div className="mc-container">
@@ -465,6 +386,8 @@ export function LandingFooter({ onInstall }: { onInstall: () => void }) {
             <span>Your workspace</span>
             <a href="/login">Clinician login</a>
             <a href="/app">Patient portal</a>
+            {dispatch?.webHref && <a href={dispatch.webHref}>Dispatch dashboard</a>}
+            <a href={crew?.webHref ?? "#crew"}>Crew app</a>
           </nav>
           <nav aria-label="Get started">
             <span>Get started</span>

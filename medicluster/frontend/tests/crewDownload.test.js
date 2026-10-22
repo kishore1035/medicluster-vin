@@ -17,8 +17,9 @@ test('Crew rapid clicks fetch and save one verified Crew APK with its own filena
   const download = createCrewDownloader({
     fetchImpl: async (url, options) => {
       requests++;
-      assert.equal(url, '/api/crew-installer');
-      assert.equal(options.method, 'POST');
+      assert.equal(url, '/downloads/medicluster-crew.apk');
+      assert.equal(options.method, 'GET');
+      assert.equal(options.headers['X-MediCluster-Installer'], '1');
       assert.equal(options.redirect, 'error');
       return new Promise(resolve => { resolveResponse = resolve; });
     },
