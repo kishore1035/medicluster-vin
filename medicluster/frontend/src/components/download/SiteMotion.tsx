@@ -10,6 +10,7 @@ export function useSiteMotion(
     if (!root) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
     const progress = root.querySelector<HTMLElement>(".mc-scroll-progress");
+    const cinema = root.querySelector<HTMLElement>(".mc-cinematic");
     const heroImage = root.querySelector<HTMLElement>(
       "[data-hero-artifact-scroll]",
     );
@@ -21,6 +22,22 @@ export function useSiteMotion(
         scrollable > 0 ? Math.min(1, Math.max(0, scrollY / scrollable)) : 0;
       if (progress) progress.style.transform = `scaleX(${amount})`;
       if (paused || reduced.matches) return;
+      if (cinema) {
+        const bounds = cinema.getBoundingClientRect();
+        const travel = Math.max(1, cinema.offsetHeight - innerHeight);
+        const p = Math.max(0, Math.min(1, -bounds.top / travel));
+        const eased = p * p * (3 - 2 * p);
+        cinema.style.setProperty("--cinema-inset", `${eased * 14}%`);
+        cinema.style.setProperty("--cinema-scale", String(1.15 - eased * 0.15));
+        cinema.style.setProperty(
+          "--cinema-copy",
+          String(Math.max(0, 1 - p * 1.8)),
+        );
+        cinema.style.setProperty(
+          "--cinema-caption",
+          String(Math.max(0, (p - 0.55) * 2.3)),
+        );
+      }
       if (heroImage) {
         const top = root.getBoundingClientRect().top;
         heroImage.style.transform = `translateY(${Math.min(35, Math.max(0, -top * 0.045))}px)`;
@@ -43,6 +60,13 @@ export function useSiteMotion(
     const sync = () => {
       if (paused || reduced.matches) {
         elements.forEach((element) => element.classList.add("is-visible"));
+        if (cinema)
+          [
+            "--cinema-inset",
+            "--cinema-scale",
+            "--cinema-copy",
+            "--cinema-caption",
+          ].forEach((name) => cinema.style.removeProperty(name));
         heroImage?.style.removeProperty("transform");
       }
       schedule();
