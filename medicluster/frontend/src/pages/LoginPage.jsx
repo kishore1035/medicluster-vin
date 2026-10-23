@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Eye, EyeOff, ArrowUpRight } from "lucide-react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Logo from "../components/Logo";
 import { useInstallPrompt } from "../installPrompt";
+import "../auth/auth-artwork.css";
 
 export function Field({ label, aside, id, ...input }) {
   return (
@@ -20,8 +22,8 @@ export function Field({ label, aside, id, ...input }) {
   );
 }
 
-const linkCls = "text-blue-600 underline underline-offset-2 hover:text-ink";
-const primaryBtn = "h-11 rounded-[3px] bg-ink text-paper text-sm font-medium hover:bg-slate-800 disabled:opacity-60";
+const linkCls = "mc-auth-link";
+const primaryBtn = "mc-auth-submit";
 
 export default function LoginPage() {
   const { user, login, register } = useAuth();
@@ -32,6 +34,7 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const install = useInstallPrompt();
 
   if (user) return <Navigate to={user.onboarded ? location.state?.from || "/" : "/onboarding"} replace />;
@@ -59,108 +62,43 @@ export default function LoginPage() {
     setMode(next);
     setError(null);
     setNotice(null);
+    setShowPassword(false);
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-paper text-ink">
-      <aside className="hidden lg:flex flex-col justify-between bg-ink text-[#ecebe6] p-14">
-        <div className="flex items-center gap-2.5">
-          <Logo />
-          <span className="font-serif text-2xl">MediCluster</span>
-        </div>
-        <div className="flex flex-col gap-7">
-          <p className="font-serif text-[44px] leading-[1.15] tracking-[-0.015em] max-w-[480px]">
-            Patient risk stratification at scale.
-          </p>
-          <div className="flex gap-0.5 h-3.5 max-w-[420px]" aria-hidden="true">
-            <div className="bg-risk-low" style={{ flex: 41 }} />
-            <div className="bg-[#d5a640]" style={{ flex: 32 }} />
-            <div className="bg-risk-high" style={{ flex: 20 }} />
-            <div className="bg-[#d0433d] min-w-5" style={{ flex: 7 }} />
-          </div>
-          <p className="text-[15px] leading-relaxed text-[#b3b4b3] max-w-[420px]">
-            Upload patient vitals, run unsupervised clustering, and instantly identify at-risk
-            populations — no labels, no manual review.
-          </p>
-        </div>
-        <span className="font-mono text-[11px] text-[#8a8c8e]">HIPAA-aligned · Data stays in your region</span>
-      </aside>
-
-      <main className="flex items-center justify-center p-6 sm:p-14">
-        <form onSubmit={submit} className="w-full max-w-[360px] flex flex-col gap-[22px]" noValidate>
-          <div className="lg:hidden flex items-center gap-2.5 text-ink">
-            <Logo />
-            <span className="font-serif text-2xl">MediCluster</span>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <h1 className="font-serif text-[32px] tracking-[-0.01em]">
-              {mode === "signin" ? "Sign in" : "Request access"}
-            </h1>
-            <p className="text-sm text-slate-600">
-              {mode === "signin" ? "Use your hospital account." : "Create an account with your hospital email."}
-            </p>
-          </div>
-
-          {mode === "signin" && (
-            <>
-              <button
-                type="button"
-                disabled
-                title="Single sign-on isn't configured for this deployment"
-                className="h-11 rounded-[3px] border border-ink bg-transparent text-sm font-medium text-ink disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue with hospital SSO
-              </button>
-              <div className="flex items-center gap-3 font-mono text-[11px] text-slate-500">
-                <span className="flex-1 h-px bg-line" />OR<span className="flex-1 h-px bg-line" />
-              </div>
-            </>
-          )}
-
-          {mode === "request" && (
-            <Field id="name" label="Full name" autoComplete="name" value={form.name} onChange={set("name")} required />
-          )}
-          <Field
-            id="email" type="email" label="Work email" autoComplete="email"
-            value={form.email} onChange={set("email")} required
-          />
-          <Field
-            id="password" type="password" label="Password"
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            minLength={mode === "request" ? 8 : undefined}
-            value={form.password} onChange={set("password")} required
-            aside={mode === "signin" && (
-              <a href="#" className={linkCls}
-                onClick={(e) => { e.preventDefault(); setNotice("Ask your MediCluster administrator to reset your password."); }}>
-                Forgot?
-              </a>
-            )}
-          />
-
-          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-          {notice && <p role="status" className="text-sm text-slate-600">{notice}</p>}
-
-          <button type="submit" disabled={busy} className={primaryBtn}>
-            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
-          </button>
-
-          <p className="text-[13px] text-slate-600">
-            {mode === "signin" ? (
-              <>New to MediCluster? <a href="#" className={linkCls} onClick={switchMode("request")}>Request access</a></>
-            ) : (
-              <>Already have an account? <a href="#" className={linkCls} onClick={switchMode("signin")}>Sign in</a></>
-            )}
-          </p>
-          <a href="/download" className="text-[13px] text-slate-600 underline underline-offset-4">Explore MediCluster apps</a>
-
-          {install && (
-            <button type="button" onClick={install} className="btn-secondary h-10 text-[13px]">
-              Install MediCluster app
-            </button>
-          )}
-        </form>
-      </main>
+    <div className="mc-auth-shell min-h-screen text-ink" data-auth-mode={mode}>
+      <div className="mc-auth-layout">
+        <aside className="mc-auth-botanical" aria-label="MediCluster care illustration">
+          <img src="/images/auth-botanical-dna.webp" alt="" width="1000" height="1250" fetchPriority="high" decoding="async" />
+          <span className="mc-auth-chip mc-auth-chip-one">Insights<i aria-hidden="true">+</i></span>
+          <span className="mc-auth-chip mc-auth-chip-two">Wellness<i aria-hidden="true">+</i></span>
+          <span className="mc-auth-chip mc-auth-chip-three"><i aria-hidden="true">+</i>Care</span>
+          <div className="mc-auth-art-caption"><span>CONNECTED BY CARE</span><p>A clearer place<br />to care, together<span className="mc-auth-dot">.</span></p></div>
+        </aside>
+        <main>
+          <div className="mc-auth-topline"><a className="mc-auth-brand" href="/download" aria-label="MediCluster home"><Logo /><span>MediCluster</span><i aria-hidden="true" /></a><a className="mc-auth-back" href="/download" aria-label="Back to MediCluster apps"><ArrowUpRight size={19} aria-hidden="true" /></a></div>
+          <form onSubmit={submit} className="mc-auth-form" noValidate>
+            <div className="mc-auth-intro">
+              <p className="mc-auth-eyebrow">YOUR CLINICAL WORKSPACE</p>
+              <h1>{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
+              <p>{mode === "signin" ? "Sign in to continue to MediCluster." : "Get started with your hospital email."}</p>
+            </div>
+            {mode === "request" && <Field id="name" label="Full name" placeholder="Your full name" autoComplete="name" value={form.name} onChange={set("name")} required />}
+            <Field id="email" type="email" label="Work email" placeholder="you@hospital.com" autoComplete="email" value={form.email} onChange={set("email")} required />
+            <div className="mc-auth-password">
+              <Field id="password" type={showPassword ? "text" : "password"} label="Password" placeholder="Enter your password" autoComplete={mode === "signin" ? "current-password" : "new-password"} minLength={mode === "request" ? 8 : undefined} value={form.password} onChange={set("password")} required />
+              <button className="mc-auth-password-toggle" type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button>
+            </div>
+            {mode === "signin" ? <div className="mc-auth-help"><span>Use your hospital account.</span><a href="#" className={linkCls} onClick={e => { e.preventDefault(); setNotice("Ask your MediCluster administrator to reset your password."); }}>Forgot password?</a></div> : <p className="mc-auth-password-hint">Use at least 8 characters.</p>}
+            {error && <p role="alert" className="mc-auth-error">{error}</p>}
+            {notice && <p role="status" className="mc-auth-notice">{notice}</p>}
+            <button type="submit" disabled={busy} className={primaryBtn}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}<ArrowUpRight size={18} aria-hidden="true" /></button>
+            <p className="mc-auth-switch">{mode === "signin" ? <>New to MediCluster? <a href="#" className={linkCls} onClick={switchMode("request")}>Create an account</a></> : <>Already have an account? <a href="#" className={linkCls} onClick={switchMode("signin")}>Sign in</a></>}</p>
+            {install && <button type="button" onClick={install} className="mc-auth-install">Install MediCluster app</button>}
+          </form>
+          <div className="mc-auth-footnote"><span>For every part of care.</span><a href="/download">Explore the apps<ArrowUpRight size={14} aria-hidden="true" /></a></div>
+        </main>
+      </div>
     </div>
   );
 }

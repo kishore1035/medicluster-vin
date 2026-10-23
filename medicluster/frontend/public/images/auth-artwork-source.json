@@ -1,0 +1,11 @@
+{
+  "type": "AI-generated decorative authentication backgrounds",
+  "generator": "Built-in imagegen",
+  "images": {
+    "auth-cellular.webp": "Cellular glass: sage glass cells, ivory membranes, amber cores and copper filaments. Used for clinician sign-in.",
+    "auth-ribbons.webp": "Sculpted ribbons: ivory ceramic, terracotta metal and sage glass in an architectural knot. Used for clinician account requests.",
+    "auth-orbits.webp": "Cosmic orbits: green glass orbital sculpture with amber core in forest-green atmosphere. Used for patient authentication."
+  },
+  "sourceDirectory": "/home/vinay/.codex/generated_images/01a168b2-bb63-7ee0-b5af-e9689cd85aae",
+  "processing": "Resized to 1600px wide and encoded as WebP at quality 82. No generated text or logos."
+}

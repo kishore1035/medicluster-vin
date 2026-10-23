@@ -5,7 +5,7 @@
   --mc-paper: #fbfaf7;
   --mc-sage: #e4ebdc;
   --mc-accent: #c87350;
-  --mc-serif: "Bodoni Moda", "Newsreader", Georgia, serif;
+  --mc-serif: var(--mc-sans);
   --mc-sans: "Hanken Grotesk", "IBM Plex Sans", Arial, sans-serif;
   min-height: 100vh;
   background: var(--mc-paper);
@@ -27,9 +27,10 @@
   letter-spacing: -0.045em;
 }
 .download-portal em {
-  font-family: var(--mc-serif);
-  font-weight: 400;
-  letter-spacing: -0.055em;
+  font-family: inherit;
+  font-style: normal;
+  font-weight: inherit;
+  letter-spacing: inherit;
 }
 .download-portal a {
   text-decoration: none;
@@ -220,7 +221,7 @@
 .download-menu-note > span {
   font-family: var(--mc-serif);
   font-size: 24px;
-  font-style: italic;
+  font-style: normal;
 }
 .download-menu-note p {
   font-size: 14px;
@@ -522,7 +523,7 @@
   letter-spacing: 0.06em;
 }
 .mc-cinematic-copy h2 {
-  font: clamp(46px, 6vw, 96px)/1.06 var(--mc-serif);
+  font: clamp(46px, 6vw, 96px)/1.06 var(--mc-sans);
   margin: 0;
 }
 .mc-cinematic-caption {
@@ -1122,7 +1123,7 @@
   gap: 40px;
 }
 .mc-journey-heading h2 {
-  font: clamp(45px, 5.2vw, 84px)/1.08 var(--mc-serif);
+  font: clamp(45px, 5.2vw, 84px)/1.08 var(--mc-sans);
   margin: 0;
 }
 .mc-journey-heading > p {
@@ -1145,12 +1146,12 @@
   padding-left: 25px;
 }
 .mc-step-number {
-  font: 88px/1 var(--mc-serif);
+  font: 88px/1 var(--mc-sans);
   color: #c8d9bb;
   letter-spacing: -0.07em;
 }
 .mc-journey-steps h3 {
-  font: 30px/1.15 var(--mc-serif);
+  font: 30px/1.15 var(--mc-sans);
   margin: 15px 0;
 }
 .mc-journey-steps p {
@@ -1285,7 +1286,7 @@
   height: 30px;
 }
 .mc-footer-brand > p {
-  font: italic 21px var(--mc-serif);
+  font: 21px var(--mc-sans);
   margin: 10px 0 0 42px;
 }
 .mc-footer nav {
@@ -1338,7 +1339,7 @@
 .mc-footer-bottom > span:last-child {
   font-family: var(--mc-serif);
   font-size: 15px;
-  font-style: italic;
+  font-style: normal;
 }
 [data-reveal].will-reveal {
   opacity: 0;

@@ -14,6 +14,7 @@ import EmergencyScreen from "./screens/EmergencyScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import ReminderAlert from "./ReminderAlert";
 import LoginScreen from "./screens/LoginScreen";
+import "../auth/auth-artwork.css";
 import { isPatientAndroid } from "./patientPlatform";
 
 const PatientContext = createContext(null);
@@ -154,7 +155,7 @@ export default function PatientApp() {
 
   return (
     <PatientContext.Provider value={value}>
-      <PhoneFrame>
+      <PhoneFrame signedIn={Boolean(patientId)}>
         {patientId ? <AppRoutes /> : <LoginScreen onSignedIn={signIn} />}
         {patientId && <DoseAlerts />}
       </PhoneFrame>
@@ -178,13 +179,14 @@ function AppRoutes() {
 }
 
 /** Full-screen on phones; a 390×844 device frame on larger screens. */
-function PhoneFrame({ children }) {
+function PhoneFrame({ children, signedIn }) {
   if (isPatientAndroid()) {
-    return <div className="h-[100dvh] w-full bg-paper text-ink overflow-hidden flex flex-col">{children}</div>;
+    if (signedIn) return <div className="h-[100dvh] w-full bg-paper text-ink overflow-hidden flex flex-col">{children}</div>;
+    return <div className="mc-patient-auth-shell h-[100dvh] w-full flex items-center justify-center"><div className="mc-patient-device relative bg-paper text-ink overflow-hidden flex flex-col">{children}</div></div>;
   }
   return (
-    <div className="min-h-[100dvh] bg-[#e4e1da] flex items-center justify-center sm:py-8">
-      <div className="relative w-full h-[100dvh] sm:w-[390px] sm:h-[844px] sm:rounded-[44px] sm:border-[10px] sm:border-ink bg-paper text-ink overflow-hidden flex flex-col">
+    <div className={`${signedIn ? "" : "mc-patient-auth-shell"} min-h-[100dvh] bg-[#e4e1da] flex items-center justify-center sm:py-8`}>
+      <div className={`${signedIn ? "" : "mc-patient-device"} relative w-full h-[100dvh] sm:w-[390px] sm:h-[844px] sm:rounded-[44px] sm:border-[10px] sm:border-ink bg-paper text-ink overflow-hidden flex flex-col`}>
         <StatusBar />
         {children}
       </div>
