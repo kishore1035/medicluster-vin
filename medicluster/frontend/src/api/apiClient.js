@@ -237,18 +237,46 @@ export async function explainFindings(fileId, findings, modelName = "densenet121
 }
 
 /**
- * Ask AI — direct Claude vision chat using base64 image (no GridFS).
- * @param {string} imageBase64  Raw base64 string (no data: prefix)
+ * Ask AI — direct multimodal vision & clinical reasoning chat.
+ * @param {string} imageBase64  Raw base64 string (optional)
  * @param {string} mediaType    MIME type e.g. "image/jpeg"
  * @param {Array}  chatHistory  [{role, content}] previous turns
  * @param {string} question     New message (empty for initial analysis)
+ * @param {string} language     Language code e.g. "en"
+ * @param {object} location     Optional user geolocation
+ * @param {Array}  images       Optional array of images [{ base64, mediaType, name }]
  */
-export async function aiChat(imageBase64, mediaType, chatHistory = [], question = "", language = "en", location = null) {
-  const res = await api.post(
-    "/media/ai-chat",
-    { imageBase64, mediaType, chatHistory, question, language, location },
-    { timeout: 120_000 }
-  );
+export async function aiChat(
+  imageBase64,
+  mediaType,
+  chatHistory = [],
+  question = "",
+  language = "en",
+  location = null,
+  images = []
+) {
+  const payload = {
+    chatHistory,
+    question,
+    language,
+    location
+  };
+
+  if (Array.isArray(images) && images.length > 0) {
+    payload.images = images.map((img) => ({
+      base64: img.base64,
+      mediaType: img.mediaType,
+      name: img.name
+    }));
+    payload.imageBase64 = images[0].base64;
+    payload.mediaType = images[0].mediaType;
+  } else if (imageBase64) {
+    payload.imageBase64 = imageBase64;
+    payload.mediaType = mediaType;
+    payload.images = [{ base64: imageBase64, mediaType }];
+  }
+
+  const res = await api.post("/media/ai-chat", payload, { timeout: 120_000 });
   return res.data;
 }
 

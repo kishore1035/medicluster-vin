@@ -1,29 +1,30 @@
-import SculptureHero from "@/components/ui/liquid-sculpture-hero";
+"use client";
 
-/** Standalone example; homepage uses backgroundOnly to retain its navigation. */
+import * as React from "react";
+import { PromptInput } from "@/components/ui/ai-chat-input";
+
 export default function Demo() {
-  return <SculptureHero
-    src="/images/liquid-sculpture.webp"
-    mobileSrc="/images/liquid-sculpture.webp"
-    darkSrc="/images/liquid-sculpture.webp"
-    mobileDarkSrc="/images/liquid-sculpture.webp"
-    brand="MediCluster"
-    navLinks={[{ label: "Apps", href: "/download#apps" }, { label: "How to install", href: "/download#install" }]}
-    navCta={{ label: "Get the apps", href: "/download#apps" }}
-    eyebrow=""
-    headline={"Better care.\nEverywhere you are."}
-    headlineAccent=""
-    body="One connected platform. The right app for every role."
-    primaryCta={{ label: "Explore apps", href: "/download#apps" }}
-    secondaryCta={{ label: "Patient portal", href: "/app" }}
-    background="#ffffff"
-    textColor="#111215"
-    accentColor="#e0703f"
-    backdropText=""
-    themeToggle={false}
-    loadFonts={false}
-    headingFont="Arial, Helvetica, sans-serif"
-    bodyFont="Arial, Helvetica, sans-serif"
-    showCredit={false}
-  />;
+  const handleSendMessage = (
+    message: string,
+    meta: { model: string; effort: string; attachments: File[] }
+  ) => {
+    console.log("Message Submitted:", message);
+    console.log("Submission Meta:", meta);
+  };
+
+  return (
+    <div
+      className="relative flex min-h-screen w-full items-center justify-center overflow-hidden"
+      style={{
+        backgroundImage: "radial-gradient(125% 125% at 50% 101%, rgba(245,87,2,1) 10.5%, rgba(245,120,2,1) 16%, rgba(245,140,2,1) 17.5%, rgba(245,170,100,1) 25%, rgba(238,174,202,1) 40%, rgba(202,179,214,1) 65%, rgba(148,201,233,1) 100%)"
+      }}
+    >
+      <div className="p-4 w-full max-w-lg flex justify-center z-10">
+        <PromptInput
+          onSubmit={handleSendMessage}
+          placeholder="Ask anything..."
+        />
+      </div>
+    </div>
+  );
 }

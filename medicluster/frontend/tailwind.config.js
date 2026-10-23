@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+import animate from "tailwindcss-animate";
 
 // MediCluster design system: warm paper neutrals, ink primary, muted semantic colours.
 // Default Tailwind families are remapped so every page picks up the palette.
@@ -91,5 +92,5 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [animate],
 };

@@ -42,10 +42,18 @@ function getNearbyHospitals(city, disease) {
   });
 }
 
-async function enrichReplyWithHospitals(reply, location) {
+async function enrichReplyWithHospitals(reply, location, options = {}) {
+  const { isFollowUp = false, question = "" } = options;
+  // If it's an ongoing conversational turn and the user did not ask about hospitals/doctors,
+  // do not inject repetitive hospital boilerplate into the chat dialogue.
+  const askedForFacilities = /\b(hospital|clinic|doctor|specialist|where to go|nearby|consultation|emergency|center|facility)\b/i.test(question || "");
+  if (isFollowUp && !askedForFacilities) {
+    return reply;
+  }
+
   let locationQuery = "Bengaluru";
   let displayLocation = "Bengaluru";
-  
+
   if (location && location.latitude && location.longitude) {
     locationQuery = `${location.latitude},${location.longitude}`;
     displayLocation = "your shared location";
@@ -62,35 +70,44 @@ async function enrichReplyWithHospitals(reply, location) {
   }
 
   let diseaseName = "";
-  try {
-    const extractionPrompt = `From the following medical assistant response, extract the single most relevant medical department or disease category (e.g. Pulmonology, Oncology, Neurology, Cardiology, Orthopedics, Gastroenterology). Reply with ONLY the category/department name (1-2 words maximum), and absolutely nothing else.
+  const specialistMatch = reply.match(/###\s*Recommended Specialist\s*\n+([^\n#]+)/i);
+  if (specialistMatch && specialistMatch[1]) {
+    diseaseName = specialistMatch[1].replace(/[^a-zA-Z\s]/g, "").trim().split(/\s+/).slice(0, 3).join(" ");
+  } else {
+    try {
+      const extractionPrompt = `From the following medical assistant response, extract the single most relevant medical department or disease category (e.g. Pulmonology, Oncology, Neurology, Cardiology, Orthopedics, Gastroenterology). Reply with ONLY the category/department name (1-2 words maximum), and absolutely nothing else.
 
 Response:
 ${reply}`;
-    console.log("Extracting medical department/disease category using LLM...");
-    const extractRes = await chatText(extractionPrompt, { maxTokens: 15 });
-    if (extractRes && extractRes.reply) {
-      diseaseName = extractRes.reply.trim().replace(/[^a-zA-Z\s]/g, "");
+      console.log("Extracting medical department/disease category using LLM...");
+      const extractRes = await chatText(extractionPrompt, { maxTokens: 15 });
+      if (extractRes && extractRes.reply) {
+        diseaseName = extractRes.reply.trim().replace(/[^a-zA-Z\s]/g, "");
+      }
+    } catch (extractErr) {
+      console.error("Failed to extract medical department:", extractErr.message);
     }
-  } catch (extractErr) {
-    console.error("Failed to extract medical department:", extractErr.message);
   }
 
   console.log(`Searching hospitals near ${locationQuery} for department: ${diseaseName || "general"}`);
   const hospitals = await getNearbyHospitals(locationQuery, diseaseName);
 
-  let hospitalText = "";
-  if (hospitals && hospitals.length > 0) {
-    hospitalText = hospitals.map(h => `- [${h.title}](${h.href}): ${h.body}`).join("\n");
-  } else {
-    hospitalText = `- Consult a specialist or general physician at a local hospital near ${displayLocation}.`;
+  if (!hospitals || hospitals.length === 0) {
+    // If no live facility links were found, do not append an empty generic bullet
+    return reply;
   }
 
+  const hospitalText = hospitals.map(h => `- [${h.title}](${h.href}): ${h.body}`).join("\n");
   const section5Regex = /(5\.\s*\*\*Which hospital to go nearby\*\*\s*:?)([\s\S]*)$/i;
+  const specialistRegex = /(###\s*Recommended Specialist[\s\S]*)$/i;
+
   if (section5Regex.test(reply)) {
-    return reply.replace(section5Regex, `$1\n\nBased on your location (${displayLocation}) and diagnosed condition, here are nearby options found via web search:\n${hospitalText}`);
+    return reply.replace(section5Regex, `$1\n\nNearby options near ${displayLocation}:\n${hospitalText}`);
   }
-  return reply + `\n\n### Nearby Hospitals near ${displayLocation}:\n${hospitalText}`;
+  if (specialistRegex.test(reply)) {
+    return reply + `\n\n**Nearby Facilities (${displayLocation}):**\n${hospitalText}`;
+  }
+  return reply + `\n\n### Nearby Medical Facilities (${displayLocation}):\n${hospitalText}`;
 }
 
 const ALLOWED_MIMETYPES = new Set([
@@ -568,26 +585,72 @@ const LANGUAGE_NAMES = {
 // POST /api/media/ai-chat  — Ollama vision chat (direct base64)
 router.post("/ai-chat", async (req, res, next) => {
   try {
-    const { imageBase64, mediaType, chatHistory = [], question = "", language = "en", location } = req.body;
-    if (!imageBase64 && !question.trim()) {
-      return res.status(400).json({ error: "imageBase64 or question is required" });
-    }
+    const {
+      images = [],
+      imageBase64,
+      mediaType,
+      chatHistory = [],
+      question = "",
+      language = "en",
+      location
+    } = req.body;
 
     const SUPPORTED = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
-    const type = SUPPORTED.has(mediaType) ? mediaType : "image/jpeg";
+
+    // Aggregate all provided images (supports multiple images or single imageBase64)
+    const imagesList = [];
+    if (Array.isArray(images) && images.length > 0) {
+      for (const img of images) {
+        if (img && img.base64) {
+          const mime = SUPPORTED.has(img.mediaType) ? img.mediaType : "image/jpeg";
+          imagesList.push({ base64: img.base64, mediaType: mime, name: img.name });
+        }
+      }
+    } else if (imageBase64) {
+      const mime = SUPPORTED.has(mediaType) ? mediaType : "image/jpeg";
+      imagesList.push({ base64: imageBase64, mediaType: mime });
+    }
+
+    if (imagesList.length === 0 && !question.trim()) {
+      return res.status(400).json({ error: "image or question is required" });
+    }
 
     const langName = LANGUAGE_NAMES[language] || "English";
     const langInstruction = language === "en"
       ? ""
       : `\nIMPORTANT: You MUST respond entirely in ${langName}. All section headings, explanations, and the disclaimer must be written in ${langName} script.`;
 
-    const systemPrompt = `You are a medical AI assistant.
-When analyzing a medical image, structure your response with these exact sections:
-1. **Name of the disease**: [Identify name of the condition or finding]
-2. **Cause of the disease**: [Briefly explain the underlying causes]
-3. **How to prevent it**: [Provide prevention steps]
-4. **How to diagnose it**: [Explain diagnostic methods or tests needed]
-5. **Which hospital to go nearby**: [Suggest the type of medical specialist, department, or facility to consult]${langInstruction}`;
+    const isFollowUp = Array.isArray(chatHistory) && chatHistory.length > 0;
+    const isImage = imagesList.length > 0;
+
+    const conversationalSystem = `You are CliniQ, an empathetic, supportive medical doctor having a normal, natural ongoing clinical consultation dialogue with a patient or clinician.
+- Keep your responses concise, direct, and conversational (around 1 to 2 short paragraphs or brief bullet points). Do NOT write long essays or monologues.
+- Maintain full medical continuity with previous discussion, scans, or symptoms discussed.
+- Answer the user's specific question directly, explain treatments or precautions simply, and ask a relevant clinical follow-up question when appropriate.
+- Clearly highlight any emergency red flags if relevant.
+- You are dedicated EXCLUSIVELY to medical, clinical, and healthcare topics. If the user asks about unrelated non-medical topics (e.g. general programming, creative writing, entertainment, politics, general trivia), politely decline and state that you are specialized exclusively for medical and healthcare guidance.${langInstruction}`;
+
+    const initialImageSystem = `You are CliniQ, an empathetic and observant clinical doctor having a normal consultation with a patient or clinician.
+Analyze the provided medical image(s) and provide a concise, natural, and helpful clinical response (around 2 to 3 short paragraphs or clean bullet points maximum):
+- Give your direct visual impression and most likely condition in 1-2 plain, accessible sentences.
+- Outline 2-3 practical immediate steps, precautions, or home-care measures.
+- Briefly mention red-flag symptoms that warrant urgent medical evaluation and the type of specialist to consult if needed.
+- End with a friendly, relevant clinical follow-up question (e.g. duration, pain/itch level, or associated symptoms) to continue a normal, interactive conversation.
+- Do NOT lecture or write long essays. Keep it natural, conversational, and direct.${langInstruction}
+- You are dedicated EXCLUSIVELY to medical, clinical, and healthcare topics.`;
+
+    const initialSymptomSystem = `You are CliniQ, an empathetic clinical doctor having a normal consultation conversation with a patient.
+Provide a concise, direct, and supportive response (around 2 to 3 short paragraphs or clean bullet points maximum):
+- Directly address their symptoms with the most likely potential causes in simple, reassuring terms.
+- Provide 2-3 practical next steps, self-care measures, or what to avoid.
+- Briefly highlight any red flags that require urgent medical attention and what type of specialist to consult.
+- End with a friendly clinical follow-up question to help narrow down the situation (e.g., duration, fever, or severity) to continue a normal, interactive conversation.
+- Do NOT lecture or write walls of text. Keep it conversational, clear, and focused.${langInstruction}
+- You are dedicated EXCLUSIVELY to medical, clinical, and healthcare topics.`;
+
+    const activeSystemPrompt = isFollowUp
+      ? conversationalSystem
+      : (isImage ? initialImageSystem : initialSymptomSystem);
 
     // Prior turns + the new question, so follow-ups answer what was actually asked.
     const transcript = [
@@ -608,31 +671,41 @@ When analyzing a medical image, structure your response with these exact section
 
     if (omniRouteKey) {
       try {
-        const isVision = Boolean(imageBase64);
-        const candidates = isVision
-          ? ["agy/gemini-3.1-flash-lite", "agy/claude-sonnet-4-6"]
-          : ["agy/gemini-3.1-flash-lite", "smart", "best-reasoning"];
+        // Prioritize Gemini 3.8 Flash model family as requested
+        const candidates = [
+          "agy/gemini-3.8-flash-medium",
+          "agy/gemini-3.8-flash-low",
+          "agy/gemini-3.8-flash-high",
+          "agy/gemini-3.1-flash-lite",
+          "smart",
+          "best-reasoning"
+        ];
 
-        const userText = question.trim() || (isVision
-          ? "Please analyze this medical image. Tell me what condition is visible, how to prevent it, how to treat it, and what medications are commonly used."
+        const userText = question.trim() || (isImage
+          ? (imagesList.length > 1
+              ? `Please analyze these ${imagesList.length} medical images. What condition or findings are visible across them, what are the causes, and what should be done?`
+              : "Please analyze this medical image. What condition or finding is visible, what are the causes, and what should be done?")
           : "Please assess these symptoms and advise on possible conditions, care steps, and recommended specialist.");
 
-        const textSystem = systemPrompt.replace("When analyzing a medical image", "When answering a patient's symptom question");
+        const userContent = isImage
+          ? [
+              { type: "text", text: userText },
+              ...imagesList.map((img) => ({
+                type: "image_url",
+                image_url: { url: `data:${img.mediaType};base64,${img.base64}` }
+              }))
+            ]
+          : userText;
 
         const messages = [
-          { role: "system", content: isVision ? systemPrompt : textSystem },
+          { role: "system", content: activeSystemPrompt },
           ...chatHistory.map((m) => ({
             role: m.role === "assistant" ? "assistant" : "user",
             content: m.content
           })),
           {
             role: "user",
-            content: isVision
-              ? [
-                  { type: "text", text: userText },
-                  { type: "image_url", image_url: { url: `data:${type};base64,${imageBase64}` } }
-                ]
-              : userText
+            content: userContent
           }
         ];
 
@@ -659,7 +732,10 @@ When analyzing a medical image, structure your response with these exact section
             const reply = response.data?.choices?.[0]?.message?.content;
             if (reply && reply.trim()) {
               console.log(`[CliniQ] Successfully received OmniRoute response using ${candidateModel}`);
-              const enrichedReply = await enrichReplyWithHospitals(reply, location);
+              const enrichedReply = await enrichReplyWithHospitals(reply, location, {
+                isFollowUp,
+                question: question.trim()
+              });
               return res.json({
                 reply: enrichedReply.trim(),
                 model: candidateModel,
@@ -676,14 +752,16 @@ When analyzing a medical image, structure your response with these exact section
     }
 
     // Text-only symptom question fallback (Ollama)
-    if (!imageBase64) {
-      const textSystem = systemPrompt.replace("When analyzing a medical image", "When answering a patient's symptom question");
+    if (!isImage) {
       try {
         const { reply } = await chatText(
           `${transcript}\n\nAssistant:`,
-          { system: textSystem, maxTokens: 1500 }
+          { system: activeSystemPrompt, maxTokens: 1500 }
         );
-        const enrichedReply = await enrichReplyWithHospitals(reply, location);
+        const enrichedReply = await enrichReplyWithHospitals(reply, location, {
+          isFollowUp,
+          question: question.trim()
+        });
         return res.json({ reply: enrichedReply.trim() });
       } catch (err) {
         if (err instanceof OllamaUnavailableError) {
@@ -695,66 +773,29 @@ When analyzing a medical image, structure your response with these exact section
       }
     }
 
-    // Optional NVIDIA NIM fallback for users who still have a key configured.
-    const nvidiaKey = process.env.NVIDIA_API_KEY;
-    if (nvidiaKey && nvidiaKey.startsWith("nvapi-")) {
-      try {
-        console.log("Using NVIDIA NIM Vision API for image analysis...");
-        const payload = {
-          model: "google/gemma-4-31b-it",
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: `${systemPrompt}\n\nUser Question: ${question.trim() || "Please analyze this medical image. Tell me what condition is visible, how to prevent it, how to treat it, and what medications are commonly used."}` },
-                { type: "image_url", image_url: { url: `data:${type};base64,${imageBase64}` } }
-              ]
-            }
-          ],
-          max_tokens: 1024,
-          temperature: 0.2
-        };
-        const response = await axios.post(
-          "https://integrate.api.nvidia.com/v1/chat/completions",
-          payload,
-          { headers: { Authorization: `Bearer ${nvidiaKey}`, "Content-Type": "application/json" }, timeout: 20000 }
-        );
-        const reply = response.data?.choices?.[0]?.message?.content;
-        if (reply) {
-          console.log("Successfully generated analysis using NVIDIA NIM!");
-          const enrichedReply = await enrichReplyWithHospitals(reply, location);
-          return res.json({ reply: enrichedReply.trim() });
-        }
-      } catch (nvidiaErr) {
-        console.error("NVIDIA NIM API call failed:", nvidiaErr.message || (nvidiaErr.response && nvidiaErr.response.data));
-      }
-    }
-
-    // Primary path: Ollama (local or cloud, OLLAMA_API_KEY auth if configured).
-    const userText = transcript ||
-      "Please analyze this medical image. Tell me what condition is visible, how to prevent it, how to treat it, and what medications are commonly used.";
-
+    // Vision fallback for images (Ollama/NIM)
     try {
+      const primaryImage = imagesList[0];
       const { reply, model } = await chatVision({
-        prompt: `${systemPrompt}\n\n${userText}`,
-        system: systemPrompt,
-        imageB64: imageBase64,
-        mediaType: type,
+        prompt: `${activeSystemPrompt}\n\n${question.trim() || "Please analyze this medical image."}`,
+        system: activeSystemPrompt,
+        imageB64: primaryImage.base64,
+        mediaType: primaryImage.mediaType,
         maxTokens: 4096,
         bypassAgentRouter: true,
         customCandidates: [{ name: "minimax-m3:cloud" }, { name: "gemma4:31b-cloud" }],
         bypassOmniRoute: true
       });
-      const enrichedReply = await enrichReplyWithHospitals(reply, location);
-      return res.json({ reply: enrichedReply.trim() });
-    } catch (err) {
-      if (err instanceof OllamaUnavailableError) {
-        console.error("Ollama vision chat unavailable:", err.message);
-        return res.status(502).json({
-          error: "Ollama vision chat unavailable — verify OLLAMA_URL is reachable and OLLAMA_API_KEY (if any) is valid.",
-        });
-      }
-      return next(err);
+      const enrichedReply = await enrichReplyWithHospitals(reply, location, {
+        isFollowUp,
+        question: question.trim()
+      });
+      return res.json({ reply: enrichedReply.trim(), model });
+    } catch (visionErr) {
+      console.error("All vision fallbacks failed:", visionErr.message);
+      return res.status(502).json({
+        error: "All AI models are currently unavailable. Please verify connection and try again."
+      });
     }
   } catch (err) {
     next(err);
